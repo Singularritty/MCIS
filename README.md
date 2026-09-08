@@ -63,6 +63,8 @@ DB_USER=postgres
 DB_PASSWORD=your_password
 ```
 
+> Catatan keamanan: `.env` dan semua konfigurasi sensitif harus dibuat secara lokal dan tidak dipublikasikan ke repository. Jangan hardcode `JWT_SECRET`, password database, atau kredensial lain di source code.
+
 ## Menjalankan Aplikasi
 
 ```bash
