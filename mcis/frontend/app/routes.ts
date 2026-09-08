@@ -11,5 +11,6 @@ export default [
 		index("routes/dashboard.tsx"),
 		route("patients", "routes/patients.tsx"),
 		route("registrations", "routes/registrations.tsx"),
+		route("queue", "routes/queue.tsx"),
 	]),
 ] satisfies RouteConfig;
