@@ -10,5 +10,6 @@ export default [
 	layout("routes/protected-layout.tsx", [
 		index("routes/dashboard.tsx"),
 		route("patients", "routes/patients.tsx"),
+		route("registrations", "routes/registrations.tsx"),
 	]),
 ] satisfies RouteConfig;
