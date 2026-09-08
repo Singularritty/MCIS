@@ -1,87 +1,76 @@
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(30) NOT NULL CHECK (role IN ('Administrator', 'Dokter', 'Petugas Pendaftaran'))
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    role TEXT NOT NULL
 );
 
-CREATE TABLE patients (
-    id SERIAL PRIMARY KEY,
-    medical_record_number VARCHAR(20) UNIQUE NOT NULL,
-    nik VARCHAR(20) UNIQUE NOT NULL,
-    name VARCHAR(120) NOT NULL,
-    gender VARCHAR(20) NOT NULL CHECK (gender IN ('Laki-laki', 'Perempuan')),
-    birth_date DATE NOT NULL,
-    phone VARCHAR(20) NOT NULL,
+CREATE TABLE IF NOT EXISTS patients (
+    id TEXT PRIMARY KEY,
+    medical_record_number TEXT NOT NULL UNIQUE,
+    nik TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    gender TEXT NOT NULL,
+    birth_date TEXT NOT NULL,
+    phone TEXT NOT NULL,
     address TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE doctors (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(120) NOT NULL,
-    specialty VARCHAR(80) NOT NULL
+CREATE TABLE IF NOT EXISTS doctors (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    specialty TEXT NOT NULL
 );
 
-CREATE TABLE polyclinics (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(80) NOT NULL
+CREATE TABLE IF NOT EXISTS clinic_polyclinics (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL
 );
 
-CREATE TABLE registrations (
-    id SERIAL PRIMARY KEY,
-    patient_id INT NOT NULL REFERENCES patients(id),
-    doctor_id INT NOT NULL REFERENCES doctors(id),
-    poly_id INT NOT NULL REFERENCES polyclinics(id),
-    visit_date DATE NOT NULL,
-    payment_type VARCHAR(30) NOT NULL,
+CREATE TABLE IF NOT EXISTS registrations (
+    id TEXT PRIMARY KEY,
+    patient_id TEXT NOT NULL,
+    doctor_id TEXT NOT NULL,
+    poly_id TEXT NOT NULL,
+    visit_date TEXT NOT NULL,
+    payment_type TEXT NOT NULL,
     complaint TEXT NOT NULL,
-    status VARCHAR(30) NOT NULL DEFAULT 'Menunggu' CHECK (status IN ('Menunggu', 'Check In', 'Pemeriksaan', 'Selesai')),
+    status TEXT NOT NULL DEFAULT 'Menunggu',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE queues (
-    id SERIAL PRIMARY KEY,
-    registration_id INT NOT NULL REFERENCES registrations(id),
-    queue_number VARCHAR(10) NOT NULL,
-    status VARCHAR(30) NOT NULL DEFAULT 'Menunggu' CHECK (status IN ('Menunggu', 'Check In', 'Pemeriksaan', 'Selesai')),
+CREATE TABLE IF NOT EXISTS queues (
+    id TEXT PRIMARY KEY,
+    registration_id TEXT NOT NULL,
+    queue_number TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Menunggu',
+    patient_name TEXT NOT NULL,
+    poly_name TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE medical_records (
-    id SERIAL PRIMARY KEY,
-    patient_id INT NOT NULL REFERENCES patients(id),
-    doctor_id INT NOT NULL REFERENCES doctors(id),
+CREATE TABLE IF NOT EXISTS medical_records (
+    id TEXT PRIMARY KEY,
+    patient_id TEXT NOT NULL,
+    doctor_id TEXT NOT NULL,
     subjective TEXT NOT NULL,
-    blood_pressure VARCHAR(20),
-    body_temperature VARCHAR(20),
-    body_weight VARCHAR(20),
-    body_height VARCHAR(20),
+    blood_pressure TEXT NOT NULL DEFAULT '-',
+    body_temperature TEXT NOT NULL DEFAULT '-',
+    body_weight TEXT NOT NULL DEFAULT '-',
+    body_height TEXT NOT NULL DEFAULT '-',
     assessment TEXT NOT NULL,
     plan TEXT NOT NULL,
-    actions TEXT,
+    actions TEXT[] NOT NULL DEFAULT '{}',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE prescriptions (
-    id SERIAL PRIMARY KEY,
-    medical_record_id INT NOT NULL REFERENCES medical_records(id),
-    patient_id INT NOT NULL REFERENCES patients(id),
-    medicine VARCHAR(120) NOT NULL,
-    dosage VARCHAR(80) NOT NULL,
-    notes TEXT,
+CREATE TABLE IF NOT EXISTS prescriptions (
+    id TEXT PRIMARY KEY,
+    medical_record_id TEXT NOT NULL,
+    patient_id TEXT NOT NULL,
+    medicine TEXT NOT NULL,
+    dosage TEXT NOT NULL,
+    notes TEXT NOT NULL DEFAULT '-',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
-INSERT INTO users (username, password_hash, role) VALUES
-('admin', '$2b$10$dummyhash', 'Administrator'),
-('dokter', '$2b$10$dummyhash', 'Dokter'),
-('registrar', '$2b$10$dummyhash', 'Petugas Pendaftaran');
-
-INSERT INTO doctors (name, specialty) VALUES
-('dr. Isyana Wijaya', 'Dokter Umum'),
-('dr. Fajar Nugraha', 'Dokter Gigi');
-
-INSERT INTO polyclinics (name) VALUES
-('Poli Umum'),
-('Poli Gigi');
