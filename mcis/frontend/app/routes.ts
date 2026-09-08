@@ -12,5 +12,6 @@ export default [
 		route("patients", "routes/patients.tsx"),
 		route("registrations", "routes/registrations.tsx"),
 		route("queue", "routes/queue.tsx"),
+		route("medical-records", "routes/medical-records.tsx"),
 	]),
 ] satisfies RouteConfig;
