@@ -17,6 +17,10 @@ CREATE TABLE IF NOT EXISTS patients (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Monotonically increasing source for medical_record_number, immune to
+-- collisions from deleted patients (unlike a COUNT(*)-based generator).
+CREATE SEQUENCE IF NOT EXISTS patient_mrn_seq START 1;
+
 CREATE TABLE IF NOT EXISTS doctors (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -30,9 +34,9 @@ CREATE TABLE IF NOT EXISTS clinic_polyclinics (
 
 CREATE TABLE IF NOT EXISTS registrations (
     id TEXT PRIMARY KEY,
-    patient_id TEXT NOT NULL,
-    doctor_id TEXT NOT NULL,
-    poly_id TEXT NOT NULL,
+    patient_id TEXT NOT NULL REFERENCES patients(id),
+    doctor_id TEXT NOT NULL REFERENCES doctors(id),
+    poly_id TEXT NOT NULL REFERENCES clinic_polyclinics(id),
     visit_date TEXT NOT NULL,
     payment_type TEXT NOT NULL,
     complaint TEXT NOT NULL,
@@ -42,7 +46,7 @@ CREATE TABLE IF NOT EXISTS registrations (
 
 CREATE TABLE IF NOT EXISTS queues (
     id TEXT PRIMARY KEY,
-    registration_id TEXT NOT NULL,
+    registration_id TEXT NOT NULL REFERENCES registrations(id),
     queue_number TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'Menunggu',
     patient_name TEXT NOT NULL,
@@ -50,10 +54,12 @@ CREATE TABLE IF NOT EXISTS queues (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- doctor_id references the authenticated user who wrote the SOAP note
+-- (role Dokter), not the doctors catalog used during registration/scheduling.
 CREATE TABLE IF NOT EXISTS medical_records (
     id TEXT PRIMARY KEY,
-    patient_id TEXT NOT NULL,
-    doctor_id TEXT NOT NULL,
+    patient_id TEXT NOT NULL REFERENCES patients(id),
+    doctor_id TEXT NOT NULL REFERENCES users(id),
     subjective TEXT NOT NULL,
     blood_pressure TEXT NOT NULL DEFAULT '-',
     body_temperature TEXT NOT NULL DEFAULT '-',
@@ -67,8 +73,8 @@ CREATE TABLE IF NOT EXISTS medical_records (
 
 CREATE TABLE IF NOT EXISTS prescriptions (
     id TEXT PRIMARY KEY,
-    medical_record_id TEXT NOT NULL,
-    patient_id TEXT NOT NULL,
+    medical_record_id TEXT NOT NULL REFERENCES medical_records(id),
+    patient_id TEXT NOT NULL REFERENCES patients(id),
     medicine TEXT NOT NULL,
     dosage TEXT NOT NULL,
     notes TEXT NOT NULL DEFAULT '-',

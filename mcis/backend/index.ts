@@ -1,6 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import express, { type Express, type NextFunction, type Request, type Response } from "express";
+import express, {
+	type Express,
+	type NextFunction,
+	type Request,
+	type Response,
+} from "express";
 import jwt from "jsonwebtoken";
 import { ensureDatabase, pool } from "./db";
 
@@ -105,7 +110,9 @@ const loadJwtSecret = () => {
 const jwtSecret = process.env.JWT_SECRET ?? loadJwtSecret();
 
 if (!jwtSecret) {
-	throw new Error("JWT_SECRET must be configured in the environment before starting the backend.");
+	throw new Error(
+		"JWT_SECRET must be configured in the environment before starting the backend.",
+	);
 }
 
 const apiSuccess = <T>(data: T, message = "Success"): ApiEnvelope<T> => ({
@@ -114,7 +121,10 @@ const apiSuccess = <T>(data: T, message = "Success"): ApiEnvelope<T> => ({
 	data,
 });
 
-const apiError = (message: string, errors: Record<string, string> = {}): ApiEnvelope<null> => ({
+const apiError = (
+	message: string,
+	errors: Record<string, string> = {},
+): ApiEnvelope<null> => ({
 	success: false,
 	message,
 	data: null,
@@ -178,7 +188,11 @@ const toPrescription = (row: Record<string, unknown>): Prescription => ({
 	notes: String(row.notes),
 });
 
-const toAuthUser = (user: { id: string; username: string; role: UserRole }) => ({
+const toAuthUser = (user: {
+	id: string;
+	username: string;
+	role: UserRole;
+}) => ({
 	id: user.id,
 	username: user.username,
 	role: user.role,
@@ -227,18 +241,33 @@ app.get("/api/health", (_: Request, res: Response) => {
 app.get("/api/doctors", requireAuth, async (_: Request, res: Response) => {
 	await ensureDatabase();
 	const result = await pool.query("SELECT * FROM doctors ORDER BY name ASC");
-	res.json(apiSuccess(result.rows.map((row) => ({ id: row.id, name: row.name, specialty: row.specialty }))));
+	res.json(
+		apiSuccess(
+			result.rows.map((row) => ({
+				id: row.id,
+				name: row.name,
+				specialty: row.specialty,
+			})),
+		),
+	);
 });
 
 app.get("/api/polyclinics", requireAuth, async (_: Request, res: Response) => {
 	await ensureDatabase();
-	const result = await pool.query("SELECT * FROM clinic_polyclinics ORDER BY name ASC");
-	res.json(apiSuccess(result.rows.map((row) => ({ id: row.id, name: row.name }))));
+	const result = await pool.query(
+		"SELECT * FROM clinic_polyclinics ORDER BY name ASC",
+	);
+	res.json(
+		apiSuccess(result.rows.map((row) => ({ id: row.id, name: row.name }))),
+	);
 });
 
 app.post("/api/login", async (req: Request, res: Response) => {
 	await ensureDatabase();
-	const { username, password } = req.body as { username?: string; password?: string };
+	const { username, password } = req.body as {
+		username?: string;
+		password?: string;
+	};
 	if (!username || !password) {
 		res.status(400).json(apiError("Username dan password wajib diisi"));
 		return;
@@ -252,7 +281,11 @@ app.post("/api/login", async (req: Request, res: Response) => {
 		res.status(401).json(apiError("Username atau password salah"));
 		return;
 	}
-	const authUser = { id: user.id, username: user.username, role: user.role as UserRole };
+	const authUser = {
+		id: user.id,
+		username: user.username,
+		role: user.role as UserRole,
+	};
 	const token = jwt.sign(authUser, jwtSecret, { expiresIn: "8h" });
 	res.json(apiSuccess({ token, user: toAuthUser(authUser) }, "Login berhasil"));
 });
@@ -263,12 +296,24 @@ app.post("/api/logout", (_: Request, res: Response) => {
 
 app.get("/api/dashboard", requireAuth, async (_: Request, res: Response) => {
 	await ensureDatabase();
-	const [totalPatients, todayPatients, todayQueue, waitingPatients, finishedPatients] = await Promise.all([
+	const [
+		totalPatients,
+		todayPatients,
+		todayQueue,
+		waitingPatients,
+		finishedPatients,
+	] = await Promise.all([
 		pool.query("SELECT COUNT(*)::int AS total FROM patients"),
-		pool.query("SELECT COUNT(*)::int AS total FROM registrations WHERE visit_date = CURRENT_DATE::text"),
+		pool.query(
+			"SELECT COUNT(*)::int AS total FROM registrations WHERE visit_date = CURRENT_DATE::text",
+		),
 		pool.query("SELECT COUNT(*)::int AS total FROM queues"),
-		pool.query("SELECT COUNT(*)::int AS total FROM queues WHERE status = 'Menunggu'"),
-		pool.query("SELECT COUNT(*)::int AS total FROM queues WHERE status = 'Selesai'"),
+		pool.query(
+			"SELECT COUNT(*)::int AS total FROM queues WHERE status = 'Menunggu'",
+		),
+		pool.query(
+			"SELECT COUNT(*)::int AS total FROM queues WHERE status = 'Selesai'",
+		),
 	]);
 	res.json(
 		apiSuccess({
@@ -283,7 +328,9 @@ app.get("/api/dashboard", requireAuth, async (_: Request, res: Response) => {
 
 app.get("/api/patients", requireAuth, async (req: Request, res: Response) => {
 	await ensureDatabase();
-	const search = String(req.query.search ?? "").trim().toLowerCase();
+	const search = String(req.query.search ?? "")
+		.trim()
+		.toLowerCase();
 	const page = Number(req.query.page ?? 1);
 	const pageSize = Number(req.query.pageSize ?? 10);
 	const values: string[] = [];
@@ -297,20 +344,32 @@ app.get("/api/patients", requireAuth, async (req: Request, res: Response) => {
 	const total = Number(countResult.rows[0].total);
 	const offset = (page - 1) * pageSize;
 	const query = `SELECT * FROM patients ${whereClause} ORDER BY created_at DESC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
-	const rows = await pool.query(query, [...values, String(pageSize), String(offset)]);
-	res.json(apiSuccess({ total, page, pageSize, items: rows.rows.map(toPatient) }));
+	const rows = await pool.query(query, [
+		...values,
+		String(pageSize),
+		String(offset),
+	]);
+	res.json(
+		apiSuccess({ total, page, pageSize, items: rows.rows.map(toPatient) }),
+	);
 });
 
-app.get("/api/patients/:id", requireAuth, async (req: Request<{ id: string }>, res: Response) => {
-	await ensureDatabase();
-	const result = await pool.query("SELECT * FROM patients WHERE id = $1", [req.params.id]);
-	const patient = result.rows[0];
-	if (!patient) {
-		res.status(404).json(apiError("Pasien tidak ditemukan"));
-		return;
-	}
-	res.json(apiSuccess(toPatient(patient)));
-});
+app.get(
+	"/api/patients/:id",
+	requireAuth,
+	async (req: Request<{ id: string }>, res: Response) => {
+		await ensureDatabase();
+		const result = await pool.query("SELECT * FROM patients WHERE id = $1", [
+			req.params.id,
+		]);
+		const patient = result.rows[0];
+		if (!patient) {
+			res.status(404).json(apiError("Pasien tidak ditemukan"));
+			return;
+		}
+		res.json(apiSuccess(toPatient(patient)));
+	},
+);
 
 app.post(
 	"/api/patients",
@@ -319,14 +378,25 @@ app.post(
 	async (req: Request, res: Response) => {
 		await ensureDatabase();
 		const payload = req.body as Partial<Patient>;
-		const requiredFields: Array<keyof Patient> = ["nik", "name", "gender", "birthDate", "phone", "address"];
+		const requiredFields: Array<keyof Patient> = [
+			"nik",
+			"name",
+			"gender",
+			"birthDate",
+			"phone",
+			"address",
+		];
 		const missing = requiredFields.filter((field) => {
 			const value = payload[field];
 			return typeof value !== "string" || value.trim().length === 0;
 		});
 		if (missing.length > 0) {
 			const field = missing[0];
-			res.status(400).json(apiError("Validasi gagal", { [String(field)]: "Field wajib diisi" }));
+			res
+				.status(400)
+				.json(
+					apiError("Validasi gagal", { [String(field)]: "Field wajib diisi" }),
+				);
 			return;
 		}
 		const nik = String(payload.nik ?? "").trim();
@@ -339,19 +409,40 @@ app.post(
 			res.status(400).json(apiError("Jenis kelamin tidak valid"));
 			return;
 		}
-		const duplicate = await pool.query("SELECT id FROM patients WHERE nik = $1", [nik]);
+		const duplicate = await pool.query(
+			"SELECT id FROM patients WHERE nik = $1",
+			[nik],
+		);
 		if (duplicate.rows.length > 0) {
 			res.status(409).json(apiError("NIK tidak boleh duplikat"));
 			return;
 		}
-		const recordCount = await pool.query("SELECT COUNT(*)::int AS total FROM patients");
+		const sequenceResult = await pool.query(
+			"SELECT nextval('patient_mrn_seq')::int AS next",
+		);
 		const patientId = `p-${Date.now()}`;
-		const medicalRecordNumber = `MR-${String(Number(recordCount.rows[0].total) + 1).padStart(4, "0")}`;
+		const medicalRecordNumber = `MR-${String(sequenceResult.rows[0].next).padStart(4, "0")}`;
 		const insertResult = await pool.query(
 			"INSERT INTO patients (id, medical_record_number, nik, name, gender, birth_date, phone, address) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
-			[patientId, medicalRecordNumber, nik, name, gender, birthDate, phone, address],
+			[
+				patientId,
+				medicalRecordNumber,
+				nik,
+				name,
+				gender,
+				birthDate,
+				phone,
+				address,
+			],
 		);
-		res.status(201).json(apiSuccess(toPatient(insertResult.rows[0]), "Pasien berhasil ditambahkan"));
+		res
+			.status(201)
+			.json(
+				apiSuccess(
+					toPatient(insertResult.rows[0]),
+					"Pasien berhasil ditambahkan",
+				),
+			);
 	},
 );
 
@@ -361,7 +452,9 @@ app.put(
 	requireRole("Administrator", "Petugas Pendaftaran"),
 	async (req: Request<{ id: string }>, res: Response) => {
 		await ensureDatabase();
-		const existing = await pool.query("SELECT * FROM patients WHERE id = $1", [req.params.id]);
+		const existing = await pool.query("SELECT * FROM patients WHERE id = $1", [
+			req.params.id,
+		]);
 		if (existing.rows.length === 0) {
 			res.status(404).json(apiError("Pasien tidak ditemukan"));
 			return;
@@ -377,9 +470,19 @@ app.put(
 		};
 		const result = await pool.query(
 			"UPDATE patients SET nik = $1, name = $2, gender = $3, birth_date = $4, phone = $5, address = $6 WHERE id = $7 RETURNING *",
-			[update.nik, update.name, update.gender, update.birth_date, update.phone, update.address, req.params.id],
+			[
+				update.nik,
+				update.name,
+				update.gender,
+				update.birth_date,
+				update.phone,
+				update.address,
+				req.params.id,
+			],
 		);
-		res.json(apiSuccess(toPatient(result.rows[0]), "Data pasien berhasil diperbarui"));
+		res.json(
+			apiSuccess(toPatient(result.rows[0]), "Data pasien berhasil diperbarui"),
+		);
 	},
 );
 
@@ -389,7 +492,10 @@ app.delete(
 	requireRole("Administrator"),
 	async (req: Request<{ id: string }>, res: Response) => {
 		await ensureDatabase();
-		const result = await pool.query("DELETE FROM patients WHERE id = $1 RETURNING id", [req.params.id]);
+		const result = await pool.query(
+			"DELETE FROM patients WHERE id = $1 RETURNING id",
+			[req.params.id],
+		);
 		if (result.rows.length === 0) {
 			res.status(404).json(apiError("Pasien tidak ditemukan"));
 			return;
@@ -398,11 +504,17 @@ app.delete(
 	},
 );
 
-app.get("/api/registrations", requireAuth, async (_: Request, res: Response) => {
-	await ensureDatabase();
-	const result = await pool.query("SELECT * FROM registrations ORDER BY created_at DESC");
-	res.json(apiSuccess(result.rows.map(toRegistration)));
-});
+app.get(
+	"/api/registrations",
+	requireAuth,
+	async (_: Request, res: Response) => {
+		await ensureDatabase();
+		const result = await pool.query(
+			"SELECT * FROM registrations ORDER BY created_at DESC",
+		);
+		res.json(apiSuccess(result.rows.map(toRegistration)));
+	},
+);
 
 app.post(
 	"/api/registrations",
@@ -417,23 +529,57 @@ app.post(
 		const visitDate = String(payload.visitDate ?? "").trim();
 		const paymentType = String(payload.paymentType ?? "").trim();
 		const complaint = String(payload.complaint ?? "").trim();
-		if (!patientId || !doctorId || !polyId || !visitDate || !paymentType || !complaint) {
+		if (
+			!patientId ||
+			!doctorId ||
+			!polyId ||
+			!visitDate ||
+			!paymentType ||
+			!complaint
+		) {
 			res.status(400).json(apiError("Data pendaftaran belum lengkap"));
 			return;
 		}
 		const registrationId = `reg-${Date.now()}`;
 		const insert = await pool.query(
 			"INSERT INTO registrations (id, patient_id, doctor_id, poly_id, visit_date, payment_type, complaint, status) VALUES ($1, $2, $3, $4, $5, $6, $7, 'Menunggu') RETURNING *",
-			[registrationId, patientId, doctorId, polyId, visitDate, paymentType, complaint],
+			[
+				registrationId,
+				patientId,
+				doctorId,
+				polyId,
+				visitDate,
+				paymentType,
+				complaint,
+			],
 		);
-		const patient = await pool.query("SELECT name FROM patients WHERE id = $1", [patientId]);
-		const poly = await pool.query("SELECT name FROM clinic_polyclinics WHERE id = $1", [polyId]);
+		const patient = await pool.query(
+			"SELECT name FROM patients WHERE id = $1",
+			[patientId],
+		);
+		const poly = await pool.query(
+			"SELECT name FROM clinic_polyclinics WHERE id = $1",
+			[polyId],
+		);
 		const queueNumber = `A${String((await pool.query("SELECT COUNT(*)::int AS total FROM queues")).rows[0].total + 1).padStart(3, "0")}`;
 		await pool.query(
 			"INSERT INTO queues (id, registration_id, queue_number, status, patient_name, poly_name) VALUES ($1, $2, $3, 'Menunggu', $4, $5)",
-			[`q-${Date.now()}`, registrationId, queueNumber, patient.rows[0]?.name ?? "Pasien", poly.rows[0]?.name ?? "Poli"],
+			[
+				`q-${Date.now()}`,
+				registrationId,
+				queueNumber,
+				patient.rows[0]?.name ?? "Pasien",
+				poly.rows[0]?.name ?? "Poli",
+			],
 		);
-		res.status(201).json(apiSuccess(toRegistration(insert.rows[0]), "Pendaftaran pasien berhasil disimpan"));
+		res
+			.status(201)
+			.json(
+				apiSuccess(
+					toRegistration(insert.rows[0]),
+					"Pendaftaran pasien berhasil disimpan",
+				),
+			);
 	},
 );
 
@@ -443,7 +589,10 @@ app.put(
 	requireRole("Petugas Pendaftaran", "Dokter"),
 	async (req: Request<{ id: string }>, res: Response) => {
 		await ensureDatabase();
-		const existing = await pool.query("SELECT * FROM registrations WHERE id = $1", [req.params.id]);
+		const existing = await pool.query(
+			"SELECT * FROM registrations WHERE id = $1",
+			[req.params.id],
+		);
 		if (existing.rows.length === 0) {
 			res.status(404).json(apiError("Registrasi tidak ditemukan"));
 			return;
@@ -462,13 +611,20 @@ app.put(
 				req.params.id,
 			],
 		);
-		res.json(apiSuccess(toRegistration(result.rows[0]), "Registrasi berhasil diperbarui"));
+		res.json(
+			apiSuccess(
+				toRegistration(result.rows[0]),
+				"Registrasi berhasil diperbarui",
+			),
+		);
 	},
 );
 
 app.get("/api/queues", requireAuth, async (_: Request, res: Response) => {
 	await ensureDatabase();
-	const result = await pool.query("SELECT * FROM queues ORDER BY queue_number ASC");
+	const result = await pool.query(
+		"SELECT * FROM queues ORDER BY queue_number ASC",
+	);
 	res.json(apiSuccess(result.rows.map(toQueueEntry)));
 });
 
@@ -483,19 +639,38 @@ app.post(
 			res.status(400).json(apiError("Registrasi tidak valid"));
 			return;
 		}
-		const registration = await pool.query("SELECT * FROM registrations WHERE id = $1", [payload.registrationId]);
+		const registration = await pool.query(
+			"SELECT * FROM registrations WHERE id = $1",
+			[payload.registrationId],
+		);
 		if (registration.rows.length === 0) {
 			res.status(400).json(apiError("Registrasi tidak valid"));
 			return;
 		}
-		const patient = await pool.query("SELECT name FROM patients WHERE id = $1", [registration.rows[0].patient_id]);
-		const poly = await pool.query("SELECT name FROM clinic_polyclinics WHERE id = $1", [registration.rows[0].poly_id]);
+		const patient = await pool.query(
+			"SELECT name FROM patients WHERE id = $1",
+			[registration.rows[0].patient_id],
+		);
+		const poly = await pool.query(
+			"SELECT name FROM clinic_polyclinics WHERE id = $1",
+			[registration.rows[0].poly_id],
+		);
 		const queueNumber = `A${String((await pool.query("SELECT COUNT(*)::int AS total FROM queues")).rows[0].total + 1).padStart(3, "0")}`;
 		const result = await pool.query(
 			"INSERT INTO queues (id, registration_id, queue_number, status, patient_name, poly_name) VALUES ($1, $2, $3, 'Menunggu', $4, $5) RETURNING *",
-			[`q-${Date.now()}`, payload.registrationId, queueNumber, patient.rows[0]?.name ?? "Pasien", poly.rows[0]?.name ?? "Poli"],
+			[
+				`q-${Date.now()}`,
+				payload.registrationId,
+				queueNumber,
+				patient.rows[0]?.name ?? "Pasien",
+				poly.rows[0]?.name ?? "Poli",
+			],
 		);
-		res.status(201).json(apiSuccess(toQueueEntry(result.rows[0]), "Antrean berhasil dibuat"));
+		res
+			.status(201)
+			.json(
+				apiSuccess(toQueueEntry(result.rows[0]), "Antrean berhasil dibuat"),
+			);
 	},
 );
 
@@ -505,12 +680,17 @@ app.put(
 	requireRole("Petugas Pendaftaran"),
 	async (req: Request<{ id: string }>, res: Response) => {
 		await ensureDatabase();
-		const result = await pool.query("UPDATE queues SET status = 'Pemeriksaan' WHERE id = $1 RETURNING *", [req.params.id]);
+		const result = await pool.query(
+			"UPDATE queues SET status = 'Pemeriksaan' WHERE id = $1 RETURNING *",
+			[req.params.id],
+		);
 		if (result.rows.length === 0) {
 			res.status(404).json(apiError("Antrean tidak ditemukan"));
 			return;
 		}
-		res.json(apiSuccess(toQueueEntry(result.rows[0]), "Antrean berikutnya dipanggil"));
+		res.json(
+			apiSuccess(toQueueEntry(result.rows[0]), "Antrean berikutnya dipanggil"),
+		);
 	},
 );
 
@@ -525,12 +705,20 @@ app.put(
 			res.status(400).json(apiError("Status belum diisi"));
 			return;
 		}
-		const result = await pool.query("UPDATE queues SET status = $1 WHERE id = $2 RETURNING *", [status, req.params.id]);
+		const result = await pool.query(
+			"UPDATE queues SET status = $1 WHERE id = $2 RETURNING *",
+			[status, req.params.id],
+		);
 		if (result.rows.length === 0) {
 			res.status(404).json(apiError("Antrean tidak ditemukan"));
 			return;
 		}
-		res.json(apiSuccess(toQueueEntry(result.rows[0]), "Status antrean berhasil diubah"));
+		res.json(
+			apiSuccess(
+				toQueueEntry(result.rows[0]),
+				"Status antrean berhasil diubah",
+			),
+		);
 	},
 );
 
@@ -573,15 +761,29 @@ app.post(
 				payload.actions ?? [],
 			],
 		);
-		res.status(201).json(apiSuccess(toMedicalRecord(result.rows[0]), "Rekam medis berhasil disimpan"));
+		res
+			.status(201)
+			.json(
+				apiSuccess(
+					toMedicalRecord(result.rows[0]),
+					"Rekam medis berhasil disimpan",
+				),
+			);
 	},
 );
 
-app.get("/api/medical-records/:patientId", requireAuth, async (req: Request<{ patientId: string }>, res: Response) => {
-	await ensureDatabase();
-	const result = await pool.query("SELECT * FROM medical_records WHERE patient_id = $1 ORDER BY created_at DESC", [req.params.patientId]);
-	res.json(apiSuccess(result.rows.map(toMedicalRecord)));
-});
+app.get(
+	"/api/medical-records/:patientId",
+	requireAuth,
+	async (req: Request<{ patientId: string }>, res: Response) => {
+		await ensureDatabase();
+		const result = await pool.query(
+			"SELECT * FROM medical_records WHERE patient_id = $1 ORDER BY created_at DESC",
+			[req.params.patientId],
+		);
+		res.json(apiSuccess(result.rows.map(toMedicalRecord)));
+	},
+);
 
 app.post(
 	"/api/prescriptions",
@@ -600,19 +802,57 @@ app.post(
 		}
 		const result = await pool.query(
 			"INSERT INTO prescriptions (id, medical_record_id, patient_id, medicine, dosage, notes) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
-			[`rx-${Date.now()}`, medicalRecordId, patientId, medicine, dosage, payload.notes ?? "-"],
+			[
+				`rx-${Date.now()}`,
+				medicalRecordId,
+				patientId,
+				medicine,
+				dosage,
+				payload.notes ?? "-",
+			],
 		);
-		res.status(201).json(apiSuccess(toPrescription(result.rows[0]), "Resep obat berhasil disimpan"));
+		res
+			.status(201)
+			.json(
+				apiSuccess(
+					toPrescription(result.rows[0]),
+					"Resep obat berhasil disimpan",
+				),
+			);
 	},
 );
 
-app.get("/api/prescriptions/:id", requireAuth, async (req: Request<{ id: string }>, res: Response) => {
-	await ensureDatabase();
-	const result = await pool.query(
-		"SELECT * FROM prescriptions WHERE id = $1 OR medical_record_id = $1 ORDER BY created_at DESC",
-		[req.params.id],
-	);
-	res.json(apiSuccess(result.rows.map(toPrescription)));
+app.get(
+	"/api/prescriptions/:id",
+	requireAuth,
+	async (req: Request<{ id: string }>, res: Response) => {
+		await ensureDatabase();
+		const result = await pool.query(
+			"SELECT * FROM prescriptions WHERE id = $1 OR medical_record_id = $1 ORDER BY created_at DESC",
+			[req.params.id],
+		);
+		res.json(apiSuccess(result.rows.map(toPrescription)));
+	},
+);
+
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+	const dbError = err as { code?: string; message?: string };
+	if (dbError.code === "23505") {
+		res.status(409).json(apiError("Data sudah ada (duplikat)"));
+		return;
+	}
+	if (dbError.code === "23503") {
+		res
+			.status(409)
+			.json(
+				apiError(
+					"Data tidak dapat diproses karena masih direferensikan oleh data lain, atau referensi yang diberikan tidak valid",
+				),
+			);
+		return;
+	}
+	console.error(err);
+	res.status(500).json(apiError("Terjadi kesalahan pada server"));
 });
 
 export function startServer(port = Number(process.env.PORT ?? 3001)) {

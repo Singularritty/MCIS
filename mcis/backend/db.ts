@@ -45,6 +45,12 @@ export const ensureDatabase = async () => {
 				);
 			`);
 
+			// Monotonically increasing source for medical_record_number, immune to
+			// collisions from deleted patients (unlike a COUNT(*)-based generator).
+			await pool.query(
+				"CREATE SEQUENCE IF NOT EXISTS patient_mrn_seq START 1;",
+			);
+
 			await pool.query(`
 				CREATE TABLE IF NOT EXISTS doctors (
 					id TEXT PRIMARY KEY,
@@ -63,9 +69,9 @@ export const ensureDatabase = async () => {
 			await pool.query(`
 				CREATE TABLE IF NOT EXISTS registrations (
 					id TEXT PRIMARY KEY,
-					patient_id TEXT NOT NULL,
-					doctor_id TEXT NOT NULL,
-					poly_id TEXT NOT NULL,
+					patient_id TEXT NOT NULL REFERENCES patients(id),
+					doctor_id TEXT NOT NULL REFERENCES doctors(id),
+					poly_id TEXT NOT NULL REFERENCES clinic_polyclinics(id),
 					visit_date TEXT NOT NULL,
 					payment_type TEXT NOT NULL,
 					complaint TEXT NOT NULL,
@@ -77,7 +83,7 @@ export const ensureDatabase = async () => {
 			await pool.query(`
 				CREATE TABLE IF NOT EXISTS queues (
 					id TEXT PRIMARY KEY,
-					registration_id TEXT NOT NULL,
+					registration_id TEXT NOT NULL REFERENCES registrations(id),
 					queue_number TEXT NOT NULL,
 					status TEXT NOT NULL DEFAULT 'Menunggu',
 					patient_name TEXT NOT NULL,
@@ -86,11 +92,13 @@ export const ensureDatabase = async () => {
 				);
 			`);
 
+			// doctor_id references the authenticated user who wrote the SOAP note
+			// (role Dokter), not the doctors catalog used during registration/scheduling.
 			await pool.query(`
 				CREATE TABLE IF NOT EXISTS medical_records (
 					id TEXT PRIMARY KEY,
-					patient_id TEXT NOT NULL,
-					doctor_id TEXT NOT NULL,
+					patient_id TEXT NOT NULL REFERENCES patients(id),
+					doctor_id TEXT NOT NULL REFERENCES users(id),
 					subjective TEXT NOT NULL,
 					blood_pressure TEXT NOT NULL DEFAULT '-',
 					body_temperature TEXT NOT NULL DEFAULT '-',
@@ -106,8 +114,8 @@ export const ensureDatabase = async () => {
 			await pool.query(`
 				CREATE TABLE IF NOT EXISTS prescriptions (
 					id TEXT PRIMARY KEY,
-					medical_record_id TEXT NOT NULL,
-					patient_id TEXT NOT NULL,
+					medical_record_id TEXT NOT NULL REFERENCES medical_records(id),
+					patient_id TEXT NOT NULL REFERENCES patients(id),
 					medicine TEXT NOT NULL,
 					dosage TEXT NOT NULL,
 					notes TEXT NOT NULL DEFAULT '-',
@@ -115,7 +123,9 @@ export const ensureDatabase = async () => {
 				);
 			`);
 
-			const userCount = await pool.query("SELECT COUNT(*)::int AS total FROM users");
+			const userCount = await pool.query(
+				"SELECT COUNT(*)::int AS total FROM users",
+			);
 			if (Number(userCount.rows[0].total) === 0) {
 				const [adminHash, dokterHash, registrarHash] = await Promise.all([
 					Bun.password.hash("admin123"),
@@ -131,7 +141,9 @@ export const ensureDatabase = async () => {
 				);
 			}
 
-			const doctorCount = await pool.query("SELECT COUNT(*)::int AS total FROM doctors");
+			const doctorCount = await pool.query(
+				"SELECT COUNT(*)::int AS total FROM doctors",
+			);
 			if (Number(doctorCount.rows[0].total) === 0) {
 				await pool.query(`
 					INSERT INTO doctors (id, name, specialty) VALUES
@@ -140,7 +152,9 @@ export const ensureDatabase = async () => {
 				`);
 			}
 
-			const polyCount = await pool.query("SELECT COUNT(*)::int AS total FROM clinic_polyclinics");
+			const polyCount = await pool.query(
+				"SELECT COUNT(*)::int AS total FROM clinic_polyclinics",
+			);
 			if (Number(polyCount.rows[0].total) === 0) {
 				await pool.query(`
 					INSERT INTO clinic_polyclinics (id, name) VALUES
@@ -149,7 +163,9 @@ export const ensureDatabase = async () => {
 				`);
 			}
 
-			const patientCount = await pool.query("SELECT COUNT(*)::int AS total FROM patients");
+			const patientCount = await pool.query(
+				"SELECT COUNT(*)::int AS total FROM patients",
+			);
 			if (Number(patientCount.rows[0].total) === 0) {
 				await pool.query(`
 					INSERT INTO patients (id, medical_record_number, nik, name, gender, birth_date, phone, address) VALUES
@@ -158,7 +174,9 @@ export const ensureDatabase = async () => {
 				`);
 			}
 
-			const registrationCount = await pool.query("SELECT COUNT(*)::int AS total FROM registrations");
+			const registrationCount = await pool.query(
+				"SELECT COUNT(*)::int AS total FROM registrations",
+			);
 			if (Number(registrationCount.rows[0].total) === 0) {
 				await pool.query(`
 					INSERT INTO registrations (id, patient_id, doctor_id, poly_id, visit_date, payment_type, complaint, status) VALUES
@@ -167,7 +185,9 @@ export const ensureDatabase = async () => {
 				`);
 			}
 
-			const queueCount = await pool.query("SELECT COUNT(*)::int AS total FROM queues");
+			const queueCount = await pool.query(
+				"SELECT COUNT(*)::int AS total FROM queues",
+			);
 			if (Number(queueCount.rows[0].total) === 0) {
 				await pool.query(`
 					INSERT INTO queues (id, registration_id, queue_number, status, patient_name, poly_name) VALUES
@@ -176,15 +196,19 @@ export const ensureDatabase = async () => {
 				`);
 			}
 
-			const medicalRecordCount = await pool.query("SELECT COUNT(*)::int AS total FROM medical_records");
+			const medicalRecordCount = await pool.query(
+				"SELECT COUNT(*)::int AS total FROM medical_records",
+			);
 			if (Number(medicalRecordCount.rows[0].total) === 0) {
 				await pool.query(`
 					INSERT INTO medical_records (id, patient_id, doctor_id, subjective, blood_pressure, body_temperature, body_weight, body_height, assessment, plan, actions) VALUES
-					('mr-1', 'p-1001', 'd-1', 'Pasien mengeluh batuk berdahak sejak 2 hari lalu', '120/80', '37.5 C', '58 kg', '165 cm', 'Bronkitis akut', 'Istirahat dan minum obat sesuai resep', ARRAY['Tensimeter pasien normal', 'Suhu tubuh terpantau']);
+					('mr-1', 'p-1001', 'u-2', 'Pasien mengeluh batuk berdahak sejak 2 hari lalu', '120/80', '37.5 C', '58 kg', '165 cm', 'Bronkitis akut', 'Istirahat dan minum obat sesuai resep', ARRAY['Tensimeter pasien normal', 'Suhu tubuh terpantau']);
 				`);
 			}
 
-			const prescriptionCount = await pool.query("SELECT COUNT(*)::int AS total FROM prescriptions");
+			const prescriptionCount = await pool.query(
+				"SELECT COUNT(*)::int AS total FROM prescriptions",
+			);
 			if (Number(prescriptionCount.rows[0].total) === 0) {
 				await pool.query(`
 					INSERT INTO prescriptions (id, medical_record_id, patient_id, medicine, dosage, notes) VALUES

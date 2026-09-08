@@ -34,8 +34,10 @@ INSERT INTO queues (id, registration_id, queue_number, status, patient_name, pol
   ('q-2', 'reg-2', 'A002', 'Pemeriksaan', 'Budi Santoso', 'Poli Umum')
 ON CONFLICT (id) DO NOTHING;
 
+-- doctor_id here is a users.id (the "dokter" account authoring the note),
+-- not a doctors.id -- see comment on medical_records in clinic_schema.sql.
 INSERT INTO medical_records (id, patient_id, doctor_id, subjective, blood_pressure, body_temperature, body_weight, body_height, assessment, plan, actions) VALUES
-  ('mr-1', 'p-1001', 'd-1', 'Pasien mengeluh batuk berdahak sejak 2 hari lalu', '120/80', '37.5 C', '58 kg', '165 cm', 'Bronkitis akut', 'Istirahat dan minum obat sesuai resep', ARRAY['Tensimeter pasien normal', 'Suhu tubuh terpantau'])
+  ('mr-1', 'p-1001', 'u-2', 'Pasien mengeluh batuk berdahak sejak 2 hari lalu', '120/80', '37.5 C', '58 kg', '165 cm', 'Bronkitis akut', 'Istirahat dan minum obat sesuai resep', ARRAY['Tensimeter pasien normal', 'Suhu tubuh terpantau'])
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO prescriptions (id, medical_record_id, patient_id, medicine, dosage, notes) VALUES
