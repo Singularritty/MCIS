@@ -1,0 +1,22 @@
+{
+	"name": "tets",
+	"module": "index.ts",
+	"workspaces": [
+		"mcis/*"
+	],
+	"type": "module",
+	"private": true,
+	"devDependencies": {
+		"@biomejs/biome": "2.5.12",
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^7"
+	},
+	"scripts": {
+		"dev:backend": "bun mcis/backend .",
+		"dev:frontend": "cd mcis/frontend && bun dev",
+		"dev": "bun --parallel dev:backend dev:frontend",
+		"lint": "bunx biome check --write"
+	}
+}
