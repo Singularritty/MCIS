@@ -1,10 +1,12 @@
 -- Seed data for MCIS clinic system
 -- You can run this after schema creation in PostgreSQL or MySQL-compatible DB.
+-- Passwords below are hashed (argon2id via Bun.password) for the plaintext values:
+-- admin/admin123, dokter/dokter123, registrar/registrar123
 
 INSERT INTO users (id, username, password, role) VALUES
-  ('u-1', 'admin', 'admin123', 'Administrator'),
-  ('u-2', 'dokter', 'dokter123', 'Dokter'),
-  ('u-3', 'registrar', 'registrar123', 'Petugas Pendaftaran')
+  ('u-1', 'admin', '$argon2id$v=19$m=65536,t=2,p=1$GIic8WDm9U2j3OajmmlZ01bbUMbnOhIlyi3LqxbfmfU$Rbg7hc5nzHqZqeEtXctQtUjLLCzaFeEb5mC/njpuBbE', 'Administrator'),
+  ('u-2', 'dokter', '$argon2id$v=19$m=65536,t=2,p=1$5KNTjISb2YS+djQgxNxoLRd1isJOfR+W6a02SyB6S8w$oX4JElP8Z6Y/FE0Ya9tiPTCJ7GvN2jJLUOXrzo62el4', 'Dokter'),
+  ('u-3', 'registrar', '$argon2id$v=19$m=65536,t=2,p=1$/zETcjZJqDGdHL/VWADFdo3wQUea+XovyVsyUDXfZ4Q$RL/xEduTTrKknuPfJhLXWYZVVJ8W8YVTQiOeSUqjA4I', 'Petugas Pendaftaran')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO doctors (id, name, specialty) VALUES

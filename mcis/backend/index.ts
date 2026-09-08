@@ -239,12 +239,16 @@ app.get("/api/polyclinics", requireAuth, async (_: Request, res: Response) => {
 app.post("/api/login", async (req: Request, res: Response) => {
 	await ensureDatabase();
 	const { username, password } = req.body as { username?: string; password?: string };
+	if (!username || !password) {
+		res.status(400).json(apiError("Username dan password wajib diisi"));
+		return;
+	}
 	const result = await pool.query(
-		"SELECT id, username, role FROM users WHERE username = $1 AND password = $2",
-		[username, password],
+		"SELECT id, username, password, role FROM users WHERE username = $1",
+		[username],
 	);
 	const user = result.rows[0];
-	if (!user) {
+	if (!user || !(await Bun.password.verify(password, user.password))) {
 		res.status(401).json(apiError("Username atau password salah"));
 		return;
 	}

@@ -117,12 +117,18 @@ export const ensureDatabase = async () => {
 
 			const userCount = await pool.query("SELECT COUNT(*)::int AS total FROM users");
 			if (Number(userCount.rows[0].total) === 0) {
-				await pool.query(`
-					INSERT INTO users (id, username, password, role) VALUES
-					('u-1', 'admin', 'admin123', 'Administrator'),
-					('u-2', 'dokter', 'dokter123', 'Dokter'),
-					('u-3', 'registrar', 'registrar123', 'Petugas Pendaftaran');
-				`);
+				const [adminHash, dokterHash, registrarHash] = await Promise.all([
+					Bun.password.hash("admin123"),
+					Bun.password.hash("dokter123"),
+					Bun.password.hash("registrar123"),
+				]);
+				await pool.query(
+					`INSERT INTO users (id, username, password, role) VALUES
+					($1, 'admin', $2, 'Administrator'),
+					($3, 'dokter', $4, 'Dokter'),
+					($5, 'registrar', $6, 'Petugas Pendaftaran');`,
+					["u-1", adminHash, "u-2", dokterHash, "u-3", registrarHash],
+				);
 			}
 
 			const doctorCount = await pool.query("SELECT COUNT(*)::int AS total FROM doctors");
