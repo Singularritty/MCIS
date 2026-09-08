@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
 import jwt from "jsonwebtoken";
 
@@ -67,7 +69,39 @@ type Prescription = {
 	notes: string;
 };
 
-const jwtSecret = process.env.JWT_SECRET;
+const findEnvFile = () => {
+	let currentDir = process.cwd();
+	for (let index = 0; index < 10; index += 1) {
+		const envPath = path.join(currentDir, ".env");
+		if (existsSync(envPath)) {
+			return envPath;
+		}
+		const parentDir = path.dirname(currentDir);
+		if (parentDir === currentDir) {
+			return null;
+		}
+		currentDir = parentDir;
+	}
+	return null;
+};
+
+const loadJwtSecret = () => {
+	const envFile = findEnvFile();
+	if (!envFile) {
+		return undefined;
+	}
+	const rawContent = readFileSync(envFile, "utf8");
+	const match = rawContent
+		.split(/\r?\n/)
+		.find((line) => line.trim().startsWith("JWT_SECRET="));
+	if (!match) {
+		return undefined;
+	}
+	const [, value] = match.split("=");
+	return value?.trim().replace(/^['"]|['"]$/g, "");
+};
+
+const jwtSecret = process.env.JWT_SECRET ?? loadJwtSecret();
 
 if (!jwtSecret) {
 	throw new Error("JWT_SECRET must be configured in the environment before starting the backend.");
