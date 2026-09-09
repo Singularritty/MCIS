@@ -10,8 +10,10 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 import { AuthProvider } from "./lib/auth";
+import { ToastProvider } from "./lib/toast";
 
 export const links: Route.LinksFunction = () => [
+	{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
 	{ rel: "preconnect", href: "https://fonts.googleapis.com" },
 	{
 		rel: "preconnect",
@@ -45,7 +47,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function App() {
 	return (
 		<AuthProvider>
-			<Outlet />
+			<ToastProvider>
+				<Outlet />
+			</ToastProvider>
 		</AuthProvider>
 	);
 }
