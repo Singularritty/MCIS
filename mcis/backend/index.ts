@@ -1,5 +1,3 @@
-import { existsSync, readFileSync } from "node:fs";
-import path from "node:path";
 import express, {
 	type Express,
 	type NextFunction,
@@ -8,6 +6,7 @@ import express, {
 } from "express";
 import jwt from "jsonwebtoken";
 import { ensureDatabase, pool } from "./db";
+import { readEnv } from "./env";
 
 type UserRole = "Administrator" | "Dokter" | "Petugas Pendaftaran";
 
@@ -75,39 +74,7 @@ type Prescription = {
 	notes: string;
 };
 
-const findEnvFile = () => {
-	let currentDir = process.cwd();
-	for (let index = 0; index < 10; index += 1) {
-		const envPath = path.join(currentDir, ".env");
-		if (existsSync(envPath)) {
-			return envPath;
-		}
-		const parentDir = path.dirname(currentDir);
-		if (parentDir === currentDir) {
-			return null;
-		}
-		currentDir = parentDir;
-	}
-	return null;
-};
-
-const loadJwtSecret = () => {
-	const envFile = findEnvFile();
-	if (!envFile) {
-		return undefined;
-	}
-	const rawContent = readFileSync(envFile, "utf8");
-	const match = rawContent
-		.split(/\r?\n/)
-		.find((line) => line.trim().startsWith("JWT_SECRET="));
-	if (!match) {
-		return undefined;
-	}
-	const [, value] = match.split("=");
-	return value?.trim().replace(/^['"]|['"]$/g, "");
-};
-
-const jwtSecret = process.env.JWT_SECRET ?? loadJwtSecret();
+const jwtSecret = readEnv("JWT_SECRET");
 
 if (!jwtSecret) {
 	throw new Error(

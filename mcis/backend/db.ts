@@ -1,15 +1,22 @@
 import { Pool } from "pg";
+import { readEnv } from "./env";
 
 const buildDatabaseUrl = () => {
-	if (process.env.DATABASE_URL) {
-		return process.env.DATABASE_URL;
+	const databaseUrl = readEnv("DATABASE_URL");
+	if (databaseUrl) {
+		return databaseUrl;
 	}
-	const host = process.env.DB_HOST ?? "localhost";
-	const port = process.env.DB_PORT ?? "5432";
-	const name = process.env.DB_NAME ?? "mcis_db";
-	const username = process.env.DB_USER ?? "postgres";
-	const password = process.env.DB_PASSWORD ?? "postgres";
-	return `postgresql://${username}:${password}@${host}:${port}/${name}`;
+	const DB_HOST = readEnv("DB_HOST");
+	const DB_PORT = readEnv("DB_PORT");
+	const DB_NAME = readEnv("DB_NAME");
+	const DB_USER = readEnv("DB_USER");
+	const DB_PASSWORD = readEnv("DB_PASSWORD");
+	if (!DB_HOST || !DB_PORT || !DB_NAME || !DB_USER || !DB_PASSWORD) {
+		throw new Error(
+			"Database configuration must be set via DATABASE_URL, or all of DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD, in the environment.",
+		);
+	}
+	return `postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
 };
 
 export const pool = new Pool({

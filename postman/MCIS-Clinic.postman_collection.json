@@ -1,80 +1,563 @@
 {
-  "info": {
-    "name": "MCIS Clinic API",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Collection untuk endpoint Mini Clinic Information System"
-  },
-  "item": [
-    {
-      "name": "Login",
-      "request": {
-        "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
-        },
-        "url": {
-          "raw": "http://localhost:3001/api/login",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "3001",
-          "path": ["api", "login"]
-        }
-      }
-    },
-    {
-      "name": "Get Dashboard",
-      "request": {
-        "method": "GET",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}" }
-        ],
-        "url": {
-          "raw": "http://localhost:3001/api/dashboard",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "3001",
-          "path": ["api", "dashboard"]
-        }
-      }
-    },
-    {
-      "name": "Get Patients",
-      "request": {
-        "method": "GET",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}" }
-        ],
-        "url": {
-          "raw": "http://localhost:3001/api/patients",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "3001",
-          "path": ["api", "patients"]
-        }
-      }
-    },
-    {
-      "name": "Create Patient",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{token}}" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nik\": \"3201010101010003\",\n  \"name\": \"Susi Lestari\",\n  \"gender\": \"Perempuan\",\n  \"birthDate\": \"1998-02-15\",\n  \"phone\": \"081227272727\",\n  \"address\": \"Jl. Bunga No. 10, Bandung\"\n}"
-        },
-        "url": {
-          "raw": "http://localhost:3001/api/patients",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "3001",
-          "path": ["api", "patients"]
-        }
-      }
-    }
-  ]
+	"info": {
+		"name": "MCIS Clinic API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"description": "Collection lengkap untuk seluruh endpoint REST API Mini Clinic Information System (MCIS). Jalankan folder 'Authentication > Login' terlebih dahulu (atau gunakan 'Run Collection' untuk seluruh folder secara berurutan) -- token dan beberapa ID hasil create akan otomatis tersimpan ke collection variable dan dipakai ulang oleh request berikutnya."
+	},
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:3001", "type": "string" },
+		{ "key": "token", "value": "", "type": "string" },
+		{ "key": "patientId", "value": "p-1001", "type": "string" },
+		{ "key": "registrationId", "value": "", "type": "string" },
+		{ "key": "queueId", "value": "", "type": "string" },
+		{ "key": "medicalRecordId", "value": "", "type": "string" },
+		{ "key": "doctorId", "value": "d-1", "type": "string" },
+		{ "key": "polyId", "value": "poly-1", "type": "string" }
+	],
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const body = pm.response.json();",
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"if (body.success) {",
+									"  pm.collectionVariables.set('token', body.data.token);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "login"]
+						}
+					}
+				},
+				{
+					"name": "Login (Dokter)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const body = pm.response.json();",
+									"if (body.success) { pm.collectionVariables.set('token', body.data.token); }"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"dokter\",\n  \"password\": \"dokter123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "login"]
+						}
+					}
+				},
+				{
+					"name": "Login (Petugas Pendaftaran)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const body = pm.response.json();",
+									"if (body.success) { pm.collectionVariables.set('token', body.data.token); }"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"registrar\",\n  \"password\": \"registrar123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "login"]
+						}
+					}
+				},
+				{
+					"name": "Login - Invalid Credentials",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"salah\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "login"]
+						},
+						"description": "Diharapkan HTTP 401 dengan success:false."
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+						"url": {
+							"raw": "{{baseUrl}}/api/logout",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "logout"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Dashboard",
+			"item": [
+				{
+					"name": "Get Dashboard Summary",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+						"url": {
+							"raw": "{{baseUrl}}/api/dashboard",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "dashboard"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Reference Data",
+			"item": [
+				{
+					"name": "Get Doctors",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+						"url": {
+							"raw": "{{baseUrl}}/api/doctors",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "doctors"]
+						}
+					}
+				},
+				{
+					"name": "Get Polyclinics",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+						"url": {
+							"raw": "{{baseUrl}}/api/polyclinics",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "polyclinics"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Patients",
+			"item": [
+				{
+					"name": "List Patients (search + pagination)",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients?search=&page=1&pageSize=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "patients"],
+							"query": [
+								{ "key": "search", "value": "" },
+								{ "key": "page", "value": "1" },
+								{ "key": "pageSize", "value": "10" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Patient by ID",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{patientId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "patients", "{{patientId}}"]
+						}
+					}
+				},
+				{
+					"name": "Create Patient",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const body = pm.response.json();",
+									"pm.test('Status 201', () => pm.response.to.have.status(201));",
+									"if (body.success) { pm.collectionVariables.set('patientId', body.data.id); }"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nik\": \"3201010101019999\",\n  \"name\": \"Susi Lestari\",\n  \"gender\": \"Perempuan\",\n  \"birthDate\": \"1998-02-15\",\n  \"phone\": \"081227272727\",\n  \"address\": \"Jl. Bunga No. 10, Bandung\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/patients",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "patients"]
+						},
+						"description": "Butuh role Administrator atau Petugas Pendaftaran."
+					}
+				},
+				{
+					"name": "Create Patient - Duplicate NIK (validation error)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nik\": \"3201010101010001\",\n  \"name\": \"Duplikat NIK\",\n  \"gender\": \"Perempuan\",\n  \"birthDate\": \"1998-02-15\",\n  \"phone\": \"081227272727\",\n  \"address\": \"Jl. Bunga No. 10, Bandung\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/patients",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "patients"]
+						},
+						"description": "NIK ini sudah dipakai pasien seed (Rina Permata). Diharapkan HTTP 409 'NIK tidak boleh duplikat'."
+					}
+				},
+				{
+					"name": "Update Patient",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"081200000000\",\n  \"address\": \"Jl. Bunga No. 12, Bandung\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{patientId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "patients", "{{patientId}}"]
+						},
+						"description": "Butuh role Administrator atau Petugas Pendaftaran."
+					}
+				},
+				{
+					"name": "Delete Patient",
+					"request": {
+						"method": "DELETE",
+						"header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+						"url": {
+							"raw": "{{baseUrl}}/api/patients/{{patientId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "patients", "{{patientId}}"]
+						},
+						"description": "Butuh role Administrator. Akan ditolak (HTTP 409) jika pasien masih punya pendaftaran/rekam medis terkait (foreign key)."
+					}
+				}
+			]
+		},
+		{
+			"name": "Registrations",
+			"item": [
+				{
+					"name": "List Registrations",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+						"url": {
+							"raw": "{{baseUrl}}/api/registrations",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "registrations"]
+						}
+					}
+				},
+				{
+					"name": "Create Registration",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const body = pm.response.json();",
+									"pm.test('Status 201', () => pm.response.to.have.status(201));",
+									"if (body.success) { pm.collectionVariables.set('registrationId', body.data.id); }"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"patientId\": \"{{patientId}}\",\n  \"doctorId\": \"{{doctorId}}\",\n  \"polyId\": \"{{polyId}}\",\n  \"visitDate\": \"2026-09-09\",\n  \"paymentType\": \"BPJS\",\n  \"complaint\": \"Batuk dan demam selama 2 hari\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/registrations",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "registrations"]
+						},
+						"description": "Butuh role Petugas Pendaftaran. Otomatis membuat entri antrean baru."
+					}
+				},
+				{
+					"name": "Update Registration Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"Check In\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/registrations/{{registrationId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "registrations", "{{registrationId}}"]
+						},
+						"description": "Butuh role Petugas Pendaftaran atau Dokter. Status valid: Menunggu, Check In, Pemeriksaan, Selesai."
+					}
+				}
+			]
+		},
+		{
+			"name": "Queue",
+			"item": [
+				{
+					"name": "List Queues",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+						"url": {
+							"raw": "{{baseUrl}}/api/queues",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "queues"]
+						}
+					}
+				},
+				{
+					"name": "Create Queue Number",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const body = pm.response.json();",
+									"pm.test('Status 201', () => pm.response.to.have.status(201));",
+									"if (body.success) { pm.collectionVariables.set('queueId', body.data.id); }"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"registrationId\": \"{{registrationId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/queues",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "queues"]
+						},
+						"description": "Butuh role Petugas Pendaftaran. Biasanya tidak perlu dipanggil manual karena POST /registrations sudah otomatis membuat antrean -- endpoint ini untuk kasus antrean perlu dibuat ulang."
+					}
+				},
+				{
+					"name": "Call Next Queue",
+					"request": {
+						"method": "PUT",
+						"header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+						"url": {
+							"raw": "{{baseUrl}}/api/queues/{{queueId}}/call",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "queues", "{{queueId}}", "call"]
+						},
+						"description": "Butuh role Petugas Pendaftaran. Mengubah status antrean menjadi 'Pemeriksaan'."
+					}
+				},
+				{
+					"name": "Update Queue Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"Selesai\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/queues/{{queueId}}/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "queues", "{{queueId}}", "status"]
+						},
+						"description": "Butuh role Dokter atau Petugas Pendaftaran."
+					}
+				}
+			]
+		},
+		{
+			"name": "Medical Records",
+			"item": [
+				{
+					"name": "Create Medical Record (SOAP)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const body = pm.response.json();",
+									"pm.test('Status 201', () => pm.response.to.have.status(201));",
+									"if (body.success) { pm.collectionVariables.set('medicalRecordId', body.data.id); }"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"patientId\": \"{{patientId}}\",\n  \"doctorId\": \"u-2\",\n  \"subjective\": \"Pasien mengeluh batuk berdahak sejak 2 hari lalu\",\n  \"objective\": {\n    \"bloodPressure\": \"120/80 mmHg\",\n    \"bodyTemperature\": \"37.5 C\",\n    \"weight\": \"58 kg\",\n    \"height\": \"165 cm\"\n  },\n  \"assessment\": \"Bronkitis akut\",\n  \"plan\": \"Istirahat dan minum obat sesuai resep\",\n  \"actions\": [\"Tensimeter pasien normal\", \"Suhu tubuh terpantau\"]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/medical-records",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "medical-records"]
+						},
+						"description": "Butuh role Dokter. `doctorId` di sini adalah users.id akun Dokter yang login (bukan doctors.id katalog), lihat README bagian Asumsi."
+					}
+				},
+				{
+					"name": "Get Medical Records by Patient",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+						"url": {
+							"raw": "{{baseUrl}}/api/medical-records/{{patientId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "medical-records", "{{patientId}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Prescriptions",
+			"item": [
+				{
+					"name": "Create Prescription",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"medicalRecordId\": \"{{medicalRecordId}}\",\n  \"patientId\": \"{{patientId}}\",\n  \"medicine\": \"Amoxicillin 500 mg\",\n  \"dosage\": \"3 x 1 tablet/hari\",\n  \"notes\": \"Diminum setelah makan\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/prescriptions",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "prescriptions"]
+						},
+						"description": "Butuh role Dokter."
+					}
+				},
+				{
+					"name": "Get Prescriptions by Medical Record",
+					"request": {
+						"method": "GET",
+						"header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+						"url": {
+							"raw": "{{baseUrl}}/api/prescriptions/{{medicalRecordId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "prescriptions", "{{medicalRecordId}}"]
+						},
+						"description": "Endpoint ini menerima id resep ATAU id rekam medis (mengembalikan seluruh resep pada rekam medis tsb)."
+					}
+				}
+			]
+		},
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Health",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{baseUrl}}/api/health",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "health"]
+						}
+					}
+				}
+			]
+		}
+	]
 }
