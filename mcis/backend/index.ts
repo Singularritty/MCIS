@@ -293,6 +293,14 @@ app.get("/api/dashboard", requireAuth, async (_: Request, res: Response) => {
 	);
 });
 
+const PATIENT_SORT_COLUMNS: Record<string, string> = {
+	medicalRecordNumber: "medical_record_number",
+	name: "name",
+	nik: "nik",
+	gender: "gender",
+	phone: "phone",
+};
+
 app.get("/api/patients", requireAuth, async (req: Request, res: Response) => {
 	await ensureDatabase();
 	const search = String(req.query.search ?? "")
@@ -300,6 +308,14 @@ app.get("/api/patients", requireAuth, async (req: Request, res: Response) => {
 		.toLowerCase();
 	const page = Number(req.query.page ?? 1);
 	const pageSize = Number(req.query.pageSize ?? 10);
+	// Never interpolate req.query directly into SQL -- only values looked up
+	// from this fixed whitelist are allowed as the ORDER BY column/direction.
+	const sortColumn = PATIENT_SORT_COLUMNS[String(req.query.sortBy ?? "")];
+	const sortDirection =
+		String(req.query.sortOrder ?? "").toLowerCase() === "desc" ? "DESC" : "ASC";
+	const orderByClause = sortColumn
+		? `${sortColumn} ${sortDirection}`
+		: "created_at DESC";
 	const values: string[] = [];
 	let whereClause = "";
 	if (search) {
@@ -310,7 +326,7 @@ app.get("/api/patients", requireAuth, async (req: Request, res: Response) => {
 	const countResult = await pool.query(countQuery, values);
 	const total = Number(countResult.rows[0].total);
 	const offset = (page - 1) * pageSize;
-	const query = `SELECT * FROM patients ${whereClause} ORDER BY created_at DESC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+	const query = `SELECT * FROM patients ${whereClause} ORDER BY ${orderByClause} LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
 	const rows = await pool.query(query, [
 		...values,
 		String(pageSize),

@@ -174,10 +174,13 @@ export const ensureDatabase = async () => {
 				"SELECT COUNT(*)::int AS total FROM patients",
 			);
 			if (Number(patientCount.rows[0].total) === 0) {
+				// medical_record_number is drawn from patient_mrn_seq (the same
+				// sequence used when patients are created via the app) so seed and
+				// app-created patients share one continuous numbering scheme.
 				await pool.query(`
 					INSERT INTO patients (id, medical_record_number, nik, name, gender, birth_date, phone, address) VALUES
-					('p-1001', 'MR-1001', '3201010101010001', 'Rina Permata', 'Perempuan', '1991-05-18', '081234567890', 'Jl. Cendana No. 12, Bandung'),
-					('p-1002', 'MR-1002', '3201010101010002', 'Budi Santoso', 'Laki-laki', '1987-09-02', '081876543210', 'Jl. Merdeka No. 35, Cimahi');
+					('p-1001', 'MR-' || LPAD(nextval('patient_mrn_seq')::text, 4, '0'), '3201010101010001', 'Rina Permata', 'Perempuan', '1991-05-18', '081234567890', 'Jl. Cendana No. 12, Bandung'),
+					('p-1002', 'MR-' || LPAD(nextval('patient_mrn_seq')::text, 4, '0'), '3201010101010002', 'Budi Santoso', 'Laki-laki', '1987-09-02', '081876543210', 'Jl. Merdeka No. 35, Cimahi');
 				`);
 			}
 

@@ -5,6 +5,7 @@ import { ConfirmDialog } from "~/components/ConfirmDialog";
 import { Modal } from "~/components/Modal";
 import { Select } from "~/components/Select";
 import { Skeleton } from "~/components/Skeleton";
+import { SortableHeader, type SortOrder } from "~/components/SortableHeader";
 import { ApiError, api, type Patient } from "~/lib/api";
 import { errorMessage, useAuth } from "~/lib/auth";
 import { useToast } from "~/lib/toast";
@@ -25,6 +26,8 @@ const EMPTY_FORM = {
 
 const PAGE_SIZE = 10;
 
+type SortKey = "medicalRecordNumber" | "name" | "nik" | "gender" | "phone";
+
 export default function PatientsPage() {
 	const { token, can } = useAuth();
 	const { showToast } = useToast();
@@ -38,6 +41,8 @@ export default function PatientsPage() {
 	const [patients, setPatients] = useState<Patient[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [sortKey, setSortKey] = useState<SortKey | null>(null);
+	const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
 	const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
 	const [form, setForm] = useState(EMPTY_FORM);
@@ -53,6 +58,8 @@ export default function PatientsPage() {
 				search,
 				page,
 				pageSize: PAGE_SIZE,
+				sortBy: sortKey ?? undefined,
+				sortOrder,
 			});
 			setPatients(result.items);
 			setTotal(result.total);
@@ -62,11 +69,21 @@ export default function PatientsPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [token, search, page]);
+	}, [token, search, page, sortKey, sortOrder]);
 
 	useEffect(() => {
 		void load();
 	}, [load]);
+
+	const handleSort = (key: SortKey) => {
+		if (sortKey === key) {
+			setSortOrder((current) => (current === "asc" ? "desc" : "asc"));
+		} else {
+			setSortKey(key);
+			setSortOrder("asc");
+		}
+		setPage(1);
+	};
 
 	const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -169,11 +186,41 @@ export default function PatientsPage() {
 				<table>
 					<thead>
 						<tr>
-							<th>No. RM</th>
-							<th>Nama</th>
-							<th>NIK</th>
-							<th>Jenis Kelamin</th>
-							<th>Telepon</th>
+							<SortableHeader
+								label="No. RM"
+								sortKey="medicalRecordNumber"
+								activeKey={sortKey}
+								order={sortOrder}
+								onSort={handleSort}
+							/>
+							<SortableHeader
+								label="Nama"
+								sortKey="name"
+								activeKey={sortKey}
+								order={sortOrder}
+								onSort={handleSort}
+							/>
+							<SortableHeader
+								label="NIK"
+								sortKey="nik"
+								activeKey={sortKey}
+								order={sortOrder}
+								onSort={handleSort}
+							/>
+							<SortableHeader
+								label="Jenis Kelamin"
+								sortKey="gender"
+								activeKey={sortKey}
+								order={sortOrder}
+								onSort={handleSort}
+							/>
+							<SortableHeader
+								label="Telepon"
+								sortKey="phone"
+								activeKey={sortKey}
+								order={sortOrder}
+								onSort={handleSort}
+							/>
 							<th>Aksi</th>
 						</tr>
 					</thead>

@@ -167,12 +167,20 @@ export const api = {
 	patients: {
 		list: (
 			token: string,
-			params: { search?: string; page?: number; pageSize?: number } = {},
+			params: {
+				search?: string;
+				page?: number;
+				pageSize?: number;
+				sortBy?: string;
+				sortOrder?: "asc" | "desc";
+			} = {},
 		) => {
 			const query = new URLSearchParams();
 			if (params.search) query.set("search", params.search);
 			query.set("page", String(params.page ?? 1));
 			query.set("pageSize", String(params.pageSize ?? 10));
+			if (params.sortBy) query.set("sortBy", params.sortBy);
+			if (params.sortOrder) query.set("sortOrder", params.sortOrder);
 			return apiRequest<PatientList>(
 				`/api/patients?${query.toString()}`,
 				token,

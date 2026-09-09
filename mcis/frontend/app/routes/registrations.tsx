@@ -1,8 +1,9 @@
 import { ClipboardPlus } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Avatar } from "~/components/Avatar";
 import { Select } from "~/components/Select";
 import { Skeleton } from "~/components/Skeleton";
+import { SortableHeader, type SortOrder } from "~/components/SortableHeader";
 import { StatusBadge } from "~/components/StatusBadge";
 import {
 	api,
@@ -29,6 +30,14 @@ const EMPTY_FORM = {
 	complaint: "",
 };
 
+type SortKey =
+	| "patient"
+	| "doctor"
+	| "poly"
+	| "visitDate"
+	| "paymentType"
+	| "status";
+
 export default function RegistrationsPage() {
 	const { token, can } = useAuth();
 	const { showToast } = useToast();
@@ -42,6 +51,8 @@ export default function RegistrationsPage() {
 	const [form, setForm] = useState(EMPTY_FORM);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [sortKey, setSortKey] = useState<SortKey | null>(null);
+	const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
 	const load = useCallback(async () => {
 		if (!token) return;
@@ -81,6 +92,48 @@ export default function RegistrationsPage() {
 		doctors.find((doctor) => doctor.id === id)?.name ?? id;
 	const polyName = (id: string) =>
 		polyclinics.find((poly) => poly.id === id)?.name ?? id;
+
+	const handleSort = (key: SortKey) => {
+		if (sortKey === key) {
+			setSortOrder((current) => (current === "asc" ? "desc" : "asc"));
+		} else {
+			setSortKey(key);
+			setSortOrder("asc");
+		}
+	};
+
+	const sortedRegistrations = useMemo(() => {
+		if (!sortKey) return registrations;
+		const sortValueOf = (registration: Registration) => {
+			switch (sortKey) {
+				case "patient":
+					return (
+						patients.find((patient) => patient.id === registration.patientId)
+							?.name ?? registration.patientId
+					);
+				case "doctor":
+					return (
+						doctors.find((doctor) => doctor.id === registration.doctorId)
+							?.name ?? registration.doctorId
+					);
+				case "poly":
+					return (
+						polyclinics.find((poly) => poly.id === registration.polyId)?.name ??
+						registration.polyId
+					);
+				case "visitDate":
+					return registration.visitDate;
+				case "paymentType":
+					return registration.paymentType;
+				case "status":
+					return registration.status;
+			}
+		};
+		const sorted = [...registrations].sort((a, b) =>
+			sortValueOf(a).localeCompare(sortValueOf(b), "id"),
+		);
+		return sortOrder === "asc" ? sorted : sorted.reverse();
+	}, [registrations, sortKey, sortOrder, patients, doctors, polyclinics]);
 
 	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
@@ -234,13 +287,49 @@ export default function RegistrationsPage() {
 						<table>
 							<thead>
 								<tr>
-									<th>Pasien</th>
-									<th>Dokter</th>
-									<th>Poli</th>
-									<th>Tanggal</th>
-									<th>Pembayaran</th>
+									<SortableHeader
+										label="Pasien"
+										sortKey="patient"
+										activeKey={sortKey}
+										order={sortOrder}
+										onSort={handleSort}
+									/>
+									<SortableHeader
+										label="Dokter"
+										sortKey="doctor"
+										activeKey={sortKey}
+										order={sortOrder}
+										onSort={handleSort}
+									/>
+									<SortableHeader
+										label="Poli"
+										sortKey="poly"
+										activeKey={sortKey}
+										order={sortOrder}
+										onSort={handleSort}
+									/>
+									<SortableHeader
+										label="Tanggal"
+										sortKey="visitDate"
+										activeKey={sortKey}
+										order={sortOrder}
+										onSort={handleSort}
+									/>
+									<SortableHeader
+										label="Pembayaran"
+										sortKey="paymentType"
+										activeKey={sortKey}
+										order={sortOrder}
+										onSort={handleSort}
+									/>
 									<th>Keluhan</th>
-									<th>Status</th>
+									<SortableHeader
+										label="Status"
+										sortKey="status"
+										activeKey={sortKey}
+										order={sortOrder}
+										onSort={handleSort}
+									/>
 									{canChangeStatus && <th>Aksi</th>}
 								</tr>
 							</thead>
@@ -255,7 +344,7 @@ export default function RegistrationsPage() {
 										</tr>
 									))}
 								{!loading &&
-									registrations.map((registration) => (
+									sortedRegistrations.map((registration) => (
 										<tr key={registration.id}>
 											<td>
 												<div className="name-cell">

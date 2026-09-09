@@ -19,9 +19,12 @@ INSERT INTO clinic_polyclinics (id, name) VALUES
   ('poly-2', 'Poli Gigi')
 ON CONFLICT (id) DO NOTHING;
 
+-- medical_record_number is drawn from patient_mrn_seq (same sequence used
+-- when patients are created via the app) so seed and app-created patients
+-- share one continuous, gap-free-looking numbering scheme.
 INSERT INTO patients (id, medical_record_number, nik, name, gender, birth_date, phone, address) VALUES
-  ('p-1001', 'MR-1001', '3201010101010001', 'Rina Permata', 'Perempuan', '1991-05-18', '081234567890', 'Jl. Cendana No. 12, Bandung'),
-  ('p-1002', 'MR-1002', '3201010101010002', 'Budi Santoso', 'Laki-laki', '1987-09-02', '081876543210', 'Jl. Merdeka No. 35, Cimahi')
+  ('p-1001', 'MR-' || LPAD(nextval('patient_mrn_seq')::text, 4, '0'), '3201010101010001', 'Rina Permata', 'Perempuan', '1991-05-18', '081234567890', 'Jl. Cendana No. 12, Bandung'),
+  ('p-1002', 'MR-' || LPAD(nextval('patient_mrn_seq')::text, 4, '0'), '3201010101010002', 'Budi Santoso', 'Laki-laki', '1987-09-02', '081876543210', 'Jl. Merdeka No. 35, Cimahi')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO registrations (id, patient_id, doctor_id, poly_id, visit_date, payment_type, complaint, status) VALUES
