@@ -154,7 +154,6 @@ cd mcis/frontend && bun run build        # build produksi frontend
 
 ## Referensi
 
-- PDF tugas: `TECHNICAL ASSIGNMENT PROGRAMMER NEXA.pdf`
 - ERD: `docs/ERD.md`
 - Database schema: `database/clinic_schema.sql`
 - Seed data: `database/seed.sql`
