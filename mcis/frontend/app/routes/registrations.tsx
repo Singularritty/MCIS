@@ -1,5 +1,8 @@
+import { ClipboardPlus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { Avatar } from "~/components/Avatar";
 import { Select } from "~/components/Select";
+import { Skeleton } from "~/components/Skeleton";
 import { StatusBadge } from "~/components/StatusBadge";
 import {
 	api,
@@ -10,6 +13,7 @@ import {
 	type Registration,
 } from "~/lib/api";
 import { errorMessage, useAuth } from "~/lib/auth";
+import { useToast } from "~/lib/toast";
 import type { Route } from "./+types/registrations";
 
 export function meta(_: Route.MetaArgs) {
@@ -27,6 +31,7 @@ const EMPTY_FORM = {
 
 export default function RegistrationsPage() {
 	const { token, can } = useAuth();
+	const { showToast } = useToast();
 	const canCreate = can("Petugas Pendaftaran");
 	const canChangeStatus = can("Petugas Pendaftaran", "Dokter");
 
@@ -35,7 +40,7 @@ export default function RegistrationsPage() {
 	const [doctors, setDoctors] = useState<Doctor[]>([]);
 	const [polyclinics, setPolyclinics] = useState<Polyclinic[]>([]);
 	const [form, setForm] = useState(EMPTY_FORM);
-	const [status, setStatus] = useState<string | null>(null);
+	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
 	const load = useCallback(async () => {
@@ -61,6 +66,8 @@ export default function RegistrationsPage() {
 			setError(null);
 		} catch (loadError) {
 			setError(errorMessage(loadError, "Gagal memuat data pendaftaran"));
+		} finally {
+			setLoading(false);
 		}
 	}, [token]);
 
@@ -79,16 +86,19 @@ export default function RegistrationsPage() {
 		event.preventDefault();
 		if (!token) return;
 		if (!form.patientId || !form.doctorId || !form.polyId) {
-			setStatus("Pasien, dokter, dan poli wajib dipilih");
+			showToast("Pasien, dokter, dan poli wajib dipilih", "error");
 			return;
 		}
 		try {
 			await api.registrations.create(token, form);
-			setStatus("Pendaftaran pasien berhasil disimpan");
+			showToast("Pendaftaran pasien berhasil disimpan");
 			setForm((current) => ({ ...current, complaint: "" }));
 			void load();
 		} catch (submitError) {
-			setStatus(errorMessage(submitError, "Pendaftaran gagal disimpan"));
+			showToast(
+				errorMessage(submitError, "Pendaftaran gagal disimpan"),
+				"error",
+			);
 		}
 	};
 
@@ -99,12 +109,15 @@ export default function RegistrationsPage() {
 		if (!token) return;
 		try {
 			await api.registrations.updateStatus(token, registration.id, nextStatus);
-			setStatus(
-				`Status pendaftaran ${registration.id} diubah menjadi ${nextStatus}`,
+			showToast(
+				`Status pendaftaran ${patientName(registration.patientId)} diubah menjadi ${nextStatus}`,
 			);
 			void load();
 		} catch (updateError) {
-			setStatus(errorMessage(updateError, "Gagal mengubah status pendaftaran"));
+			showToast(
+				errorMessage(updateError, "Gagal mengubah status pendaftaran"),
+				"error",
+			);
 		}
 	};
 
@@ -112,7 +125,6 @@ export default function RegistrationsPage() {
 		<section>
 			<h2 className="section-title">Pendaftaran Pasien</h2>
 
-			{status && <p className="status-line">{status}</p>}
 			{error && <p className="status-line error">{error}</p>}
 
 			<div className="module-grid">
@@ -209,6 +221,7 @@ export default function RegistrationsPage() {
 								/>
 							</label>
 							<button type="submit" className="span-2">
+								<ClipboardPlus size={16} strokeWidth={2.4} />
 								Simpan Pendaftaran
 							</button>
 						</form>
@@ -232,40 +245,55 @@ export default function RegistrationsPage() {
 								</tr>
 							</thead>
 							<tbody>
-								{registrations.map((registration) => (
-									<tr key={registration.id}>
-										<td>{patientName(registration.patientId)}</td>
-										<td>{doctorName(registration.doctorId)}</td>
-										<td>{polyName(registration.polyId)}</td>
-										<td>{registration.visitDate}</td>
-										<td>{registration.paymentType}</td>
-										<td>{registration.complaint}</td>
-										<td>
-											<StatusBadge status={registration.status} />
-										</td>
-										{canChangeStatus && (
-											<td>
-												<Select
-													compact
-													value={registration.status}
-													onChange={(value) =>
-														handleStatusChange(
-															registration,
-															value as Registration["status"],
-														)
-													}
-													options={REGISTRATION_STATUSES.map(
-														(statusOption) => ({
-															value: statusOption,
-															label: statusOption,
-														}),
-													)}
-												/>
+								{loading &&
+									Array.from({ length: 3 }).map((_, index) => (
+										// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton rows, no reordering
+										<tr key={`skeleton-${index}`}>
+											<td colSpan={canChangeStatus ? 8 : 7}>
+												<Skeleton height={20} />
 											</td>
-										)}
-									</tr>
-								))}
-								{registrations.length === 0 && (
+										</tr>
+									))}
+								{!loading &&
+									registrations.map((registration) => (
+										<tr key={registration.id}>
+											<td>
+												<div className="name-cell">
+													<Avatar name={patientName(registration.patientId)} />
+													{patientName(registration.patientId)}
+												</div>
+											</td>
+											<td>{doctorName(registration.doctorId)}</td>
+											<td>{polyName(registration.polyId)}</td>
+											<td>{registration.visitDate}</td>
+											<td>{registration.paymentType}</td>
+											<td>{registration.complaint}</td>
+											<td>
+												<StatusBadge status={registration.status} />
+											</td>
+											{canChangeStatus && (
+												<td>
+													<Select
+														compact
+														value={registration.status}
+														onChange={(value) =>
+															handleStatusChange(
+																registration,
+																value as Registration["status"],
+															)
+														}
+														options={REGISTRATION_STATUSES.map(
+															(statusOption) => ({
+																value: statusOption,
+																label: statusOption,
+															}),
+														)}
+													/>
+												</td>
+											)}
+										</tr>
+									))}
+								{!loading && registrations.length === 0 && (
 									<tr>
 										<td colSpan={canChangeStatus ? 8 : 7} className="empty-row">
 											Belum ada pendaftaran

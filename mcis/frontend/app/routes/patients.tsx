@@ -1,8 +1,13 @@
+import { Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { Avatar } from "~/components/Avatar";
+import { ConfirmDialog } from "~/components/ConfirmDialog";
 import { Modal } from "~/components/Modal";
 import { Select } from "~/components/Select";
+import { Skeleton } from "~/components/Skeleton";
 import { ApiError, api, type Patient } from "~/lib/api";
 import { errorMessage, useAuth } from "~/lib/auth";
+import { useToast } from "~/lib/toast";
 import type { Route } from "./+types/patients";
 
 export function meta(_: Route.MetaArgs) {
@@ -22,6 +27,7 @@ const PAGE_SIZE = 10;
 
 export default function PatientsPage() {
 	const { token, can } = useAuth();
+	const { showToast } = useToast();
 	const canWrite = can("Administrator", "Petugas Pendaftaran");
 	const canDelete = can("Administrator");
 
@@ -30,7 +36,7 @@ export default function PatientsPage() {
 	const [page, setPage] = useState(1);
 	const [total, setTotal] = useState(0);
 	const [patients, setPatients] = useState<Patient[]>([]);
-	const [status, setStatus] = useState<string | null>(null);
+	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
 	const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
@@ -38,6 +44,7 @@ export default function PatientsPage() {
 	const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [detailPatient, setDetailPatient] = useState<Patient | null>(null);
+	const [deleteTarget, setDeleteTarget] = useState<Patient | null>(null);
 
 	const load = useCallback(async () => {
 		if (!token) return;
@@ -52,6 +59,8 @@ export default function PatientsPage() {
 			setError(null);
 		} catch (loadError) {
 			setError(errorMessage(loadError, "Gagal memuat data pasien"));
+		} finally {
+			setLoading(false);
 		}
 	}, [token, search, page]);
 
@@ -94,10 +103,10 @@ export default function PatientsPage() {
 		try {
 			if (formMode === "edit" && editingId) {
 				await api.patients.update(token, editingId, form);
-				setStatus(`Data pasien ${form.name} berhasil diperbarui`);
+				showToast(`Data pasien ${form.name} berhasil diperbarui`);
 			} else {
 				await api.patients.create(token, form);
-				setStatus(`Pasien ${form.name} berhasil ditambahkan`);
+				showToast(`Pasien ${form.name} berhasil ditambahkan`);
 			}
 			closeForm();
 			void load();
@@ -105,19 +114,21 @@ export default function PatientsPage() {
 			if (submitError instanceof ApiError && submitError.errors) {
 				setFormErrors(submitError.errors);
 			}
-			setStatus(errorMessage(submitError, "Gagal menyimpan data pasien"));
+			showToast(
+				errorMessage(submitError, "Gagal menyimpan data pasien"),
+				"error",
+			);
 		}
 	};
 
 	const handleDelete = async (patient: Patient) => {
 		if (!token) return;
-		if (!window.confirm(`Hapus data pasien ${patient.name}?`)) return;
 		try {
 			await api.patients.remove(token, patient.id);
-			setStatus(`Pasien ${patient.name} berhasil dihapus`);
+			showToast(`Pasien ${patient.name} berhasil dihapus`);
 			void load();
 		} catch (deleteError) {
-			setStatus(errorMessage(deleteError, "Gagal menghapus pasien"));
+			showToast(errorMessage(deleteError, "Gagal menghapus pasien"), "error");
 		}
 	};
 
@@ -127,6 +138,7 @@ export default function PatientsPage() {
 				<h2 className="section-title">Data Pasien</h2>
 				{canWrite && (
 					<button type="button" onClick={openCreate}>
+						<Plus size={16} strokeWidth={2.4} />
 						Tambah Data
 					</button>
 				)}
@@ -140,16 +152,18 @@ export default function PatientsPage() {
 					setSearch(searchInput);
 				}}
 			>
-				<input
-					value={searchInput}
-					onChange={(event) => setSearchInput(event.target.value)}
-					placeholder="Cari nama, NIK, No. RM, atau telepon"
-				/>
+				<div className="icon-input">
+					<Search size={16} strokeWidth={2.2} aria-hidden="true" />
+					<input
+						value={searchInput}
+						onChange={(event) => setSearchInput(event.target.value)}
+						placeholder="Cari nama, NIK, No. RM, atau telepon"
+					/>
+				</div>
 				<button type="submit">Cari</button>
 			</form>
 
 			{error && <p className="status-line error">{error}</p>}
-			{status && <p className="status-line">{status}</p>}
 
 			<div className="table-wrap">
 				<table>
@@ -164,43 +178,61 @@ export default function PatientsPage() {
 						</tr>
 					</thead>
 					<tbody>
-						{patients.map((patient) => (
-							<tr key={patient.id}>
-								<td>{patient.medicalRecordNumber}</td>
-								<td>{patient.name}</td>
-								<td>{patient.nik}</td>
-								<td>{patient.gender}</td>
-								<td>{patient.phone}</td>
-								<td className="row-actions">
-									<button
-										type="button"
-										className="link-button"
-										onClick={() => setDetailPatient(patient)}
-									>
-										Detail
-									</button>
-									{canWrite && (
+						{loading &&
+							Array.from({ length: 4 }).map((_, index) => (
+								// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton rows, no reordering
+								<tr key={`skeleton-${index}`}>
+									<td colSpan={6}>
+										<Skeleton height={20} />
+									</td>
+								</tr>
+							))}
+						{!loading &&
+							patients.map((patient) => (
+								<tr key={patient.id}>
+									<td>{patient.medicalRecordNumber}</td>
+									<td>
+										<div className="name-cell">
+											<Avatar name={patient.name} />
+											{patient.name}
+										</div>
+									</td>
+									<td>{patient.nik}</td>
+									<td>{patient.gender}</td>
+									<td>{patient.phone}</td>
+									<td className="row-actions">
 										<button
 											type="button"
 											className="link-button"
-											onClick={() => openEdit(patient)}
+											onClick={() => setDetailPatient(patient)}
 										>
-											Ubah
+											<Eye size={15} strokeWidth={2.2} />
+											Detail
 										</button>
-									)}
-									{canDelete && (
-										<button
-											type="button"
-											className="link-button danger"
-											onClick={() => handleDelete(patient)}
-										>
-											Hapus
-										</button>
-									)}
-								</td>
-							</tr>
-						))}
-						{patients.length === 0 && (
+										{canWrite && (
+											<button
+												type="button"
+												className="link-button"
+												onClick={() => openEdit(patient)}
+											>
+												<Pencil size={15} strokeWidth={2.2} />
+												Ubah
+											</button>
+										)}
+										{canDelete && (
+											<button
+												type="button"
+												className="link-button danger"
+												onClick={() => setDeleteTarget(patient)}
+											>
+												<Trash2 size={15} strokeWidth={2.2} />
+												Hapus
+											</button>
+										)}
+									</td>
+								</tr>
+							))}
+						{!loading && patients.length === 0 && (
 							<tr>
 								<td colSpan={6} className="empty-row">
 									Tidak ada data pasien
@@ -352,6 +384,17 @@ export default function PatientsPage() {
 						<dd>{detailPatient.address}</dd>
 					</dl>
 				</Modal>
+			)}
+
+			{deleteTarget && (
+				<ConfirmDialog
+					title="Hapus Data Pasien"
+					message={`Yakin ingin menghapus data pasien ${deleteTarget.name}? Tindakan ini tidak bisa dibatalkan.`}
+					confirmLabel="Ya, Hapus"
+					danger
+					onConfirm={() => handleDelete(deleteTarget)}
+					onClose={() => setDeleteTarget(null)}
+				/>
 			)}
 		</section>
 	);

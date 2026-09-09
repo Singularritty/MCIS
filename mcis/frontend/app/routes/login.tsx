@@ -1,3 +1,4 @@
+import { Lock, LogIn, Stethoscope, User } from "lucide-react";
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { errorMessage, useAuth } from "~/lib/auth";
@@ -38,6 +39,9 @@ export default function Login() {
 	return (
 		<main className="login-shell">
 			<section className="login-card">
+				<span className="login-icon">
+					<Stethoscope size={22} strokeWidth={2.2} />
+				</span>
 				<p className="eyebrow">MCIS</p>
 				<h1>Mini Clinic Information System</h1>
 				<p className="subtext">
@@ -46,33 +50,40 @@ export default function Login() {
 				<form onSubmit={handleSubmit} className="login-form">
 					<label>
 						<span>Username</span>
-						<input
-							value={form.username}
-							onChange={(event) =>
-								setForm((current) => ({
-									...current,
-									username: event.target.value,
-								}))
-							}
-							required
-						/>
+						<div className="icon-input">
+							<User size={16} strokeWidth={2.2} aria-hidden="true" />
+							<input
+								value={form.username}
+								onChange={(event) =>
+									setForm((current) => ({
+										...current,
+										username: event.target.value,
+									}))
+								}
+								required
+							/>
+						</div>
 					</label>
 					<label>
 						<span>Password</span>
-						<input
-							type="password"
-							value={form.password}
-							onChange={(event) =>
-								setForm((current) => ({
-									...current,
-									password: event.target.value,
-								}))
-							}
-							required
-						/>
+						<div className="icon-input">
+							<Lock size={16} strokeWidth={2.2} aria-hidden="true" />
+							<input
+								type="password"
+								value={form.password}
+								onChange={(event) =>
+									setForm((current) => ({
+										...current,
+										password: event.target.value,
+									}))
+								}
+								required
+							/>
+						</div>
 					</label>
 					<div className="login-actions">
 						<button type="submit" disabled={submitting}>
+							<LogIn size={16} strokeWidth={2.4} />
 							{submitting ? "Memproses..." : "Masuk"}
 						</button>
 					</div>

@@ -1,5 +1,7 @@
+import { ClipboardPlus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Select } from "~/components/Select";
+import { Skeleton } from "~/components/Skeleton";
 import {
 	api,
 	type MedicalRecord,
@@ -7,6 +9,7 @@ import {
 	type Prescription,
 } from "~/lib/api";
 import { errorMessage, useAuth } from "~/lib/auth";
+import { useToast } from "~/lib/toast";
 import type { Route } from "./+types/medical-records";
 
 export function meta(_: Route.MetaArgs) {
@@ -29,6 +32,7 @@ const EMPTY_FORM = {
 
 export default function MedicalRecordsPage() {
 	const { token, user, can } = useAuth();
+	const { showToast } = useToast();
 	const canRecord = can("Dokter");
 
 	const [patients, setPatients] = useState<Patient[]>([]);
@@ -38,7 +42,7 @@ export default function MedicalRecordsPage() {
 		Record<string, Prescription[]>
 	>({});
 	const [form, setForm] = useState(EMPTY_FORM);
-	const [status, setStatus] = useState<string | null>(null);
+	const [loadingHistory, setLoadingHistory] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
 	const loadPatients = useCallback(async () => {
@@ -74,6 +78,8 @@ export default function MedicalRecordsPage() {
 			setError(null);
 		} catch (loadError) {
 			setError(errorMessage(loadError, "Gagal memuat riwayat pemeriksaan"));
+		} finally {
+			setLoadingHistory(false);
 		}
 	}, [token, patientId]);
 
@@ -113,11 +119,14 @@ export default function MedicalRecordsPage() {
 				});
 			}
 
-			setStatus("Rekam medis berhasil disimpan");
+			showToast("Rekam medis berhasil disimpan");
 			setForm(EMPTY_FORM);
 			void loadHistory();
 		} catch (submitError) {
-			setStatus(errorMessage(submitError, "Gagal menyimpan rekam medis"));
+			showToast(
+				errorMessage(submitError, "Gagal menyimpan rekam medis"),
+				"error",
+			);
 		}
 	};
 
@@ -138,7 +147,6 @@ export default function MedicalRecordsPage() {
 				/>
 			</div>
 
-			{status && <p className="status-line">{status}</p>}
 			{error && <p className="status-line error">{error}</p>}
 
 			<div className="module-grid">
@@ -295,6 +303,7 @@ export default function MedicalRecordsPage() {
 								/>
 							</label>
 							<button type="submit" className="span-2">
+								<ClipboardPlus size={16} strokeWidth={2.4} />
 								Simpan Rekam Medis
 							</button>
 						</form>
@@ -303,54 +312,62 @@ export default function MedicalRecordsPage() {
 
 				<div className="panel wide-panel">
 					<h3>Riwayat Pemeriksaan Pasien</h3>
-					{records.length === 0 && (
+					{!loadingHistory && records.length === 0 && (
 						<p className="empty-row">
 							Belum ada riwayat pemeriksaan untuk pasien ini
 						</p>
 					)}
 					<div className="record-list">
-						{records.map((record) => (
-							<article key={record.id} className="record-card">
-								<header>
-									<strong>
-										{new Date(record.createdAt).toLocaleString("id-ID")}
-									</strong>
-								</header>
-								<p>
-									<strong>Keluhan:</strong> {record.subjective}
-								</p>
-								<p>
-									<strong>Pemeriksaan:</strong> TD{" "}
-									{record.objective.bloodPressure}, Suhu{" "}
-									{record.objective.bodyTemperature}, BB{" "}
-									{record.objective.weight}, TB {record.objective.height}
-								</p>
-								<p>
-									<strong>Diagnosa:</strong> {record.assessment}
-								</p>
-								<p>
-									<strong>Rencana:</strong> {record.plan}
-								</p>
-								{record.actions.length > 0 && (
+						{loadingHistory &&
+							Array.from({ length: 2 }).map((_, index) => (
+								// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton rows, no reordering
+								<Skeleton key={`skeleton-${index}`} height={110} />
+							))}
+						{!loadingHistory &&
+							records.map((record) => (
+								<article key={record.id} className="record-card">
+									<header>
+										<strong>
+											{new Date(record.createdAt).toLocaleString("id-ID")}
+										</strong>
+									</header>
 									<p>
-										<strong>Tindakan:</strong> {record.actions.join(", ")}
+										<strong>Keluhan:</strong> {record.subjective}
 									</p>
-								)}
-								{(prescriptionsByRecord[record.id]?.length ?? 0) > 0 && (
-									<div className="prescription-list">
-										<strong>Resep:</strong>
-										<ul>
-											{prescriptionsByRecord[record.id].map((prescription) => (
-												<li key={prescription.id}>
-													{prescription.medicine} &ndash; {prescription.dosage}{" "}
-													({prescription.notes})
-												</li>
-											))}
-										</ul>
-									</div>
-								)}
-							</article>
-						))}
+									<p>
+										<strong>Pemeriksaan:</strong> TD{" "}
+										{record.objective.bloodPressure}, Suhu{" "}
+										{record.objective.bodyTemperature}, BB{" "}
+										{record.objective.weight}, TB {record.objective.height}
+									</p>
+									<p>
+										<strong>Diagnosa:</strong> {record.assessment}
+									</p>
+									<p>
+										<strong>Rencana:</strong> {record.plan}
+									</p>
+									{record.actions.length > 0 && (
+										<p>
+											<strong>Tindakan:</strong> {record.actions.join(", ")}
+										</p>
+									)}
+									{(prescriptionsByRecord[record.id]?.length ?? 0) > 0 && (
+										<div className="prescription-list">
+											<strong>Resep:</strong>
+											<ul>
+												{prescriptionsByRecord[record.id].map(
+													(prescription) => (
+														<li key={prescription.id}>
+															{prescription.medicine} &ndash;{" "}
+															{prescription.dosage} ({prescription.notes})
+														</li>
+													),
+												)}
+											</ul>
+										</div>
+									)}
+								</article>
+							))}
 					</div>
 				</div>
 			</div>

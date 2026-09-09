@@ -1,3 +1,10 @@
+import {
+	CheckCircle2,
+	Clock,
+	ListOrdered,
+	UserPlus,
+	Users,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { StatCard } from "~/components/StatCard";
 import { api, type Dashboard } from "~/lib/api";
@@ -23,6 +30,8 @@ export default function DashboardPage() {
 			);
 	}, [token]);
 
+	const loading = !dashboard && !error;
+
 	return (
 		<section>
 			<h2 className="section-title">Ringkasan Klinik</h2>
@@ -31,23 +40,33 @@ export default function DashboardPage() {
 				<StatCard
 					label="Total Pasien"
 					value={dashboard?.totalPatients ?? 0}
+					icon={Users}
 					accent
+					loading={loading}
 				/>
 				<StatCard
 					label="Total Pasien Hari Ini"
 					value={dashboard?.todayPatients ?? 0}
+					icon={UserPlus}
+					loading={loading}
 				/>
 				<StatCard
 					label="Total Antrean Hari Ini"
 					value={dashboard?.todayQueue ?? 0}
+					icon={ListOrdered}
+					loading={loading}
 				/>
 				<StatCard
 					label="Total Pasien Menunggu"
 					value={dashboard?.waitingPatients ?? 0}
+					icon={Clock}
+					loading={loading}
 				/>
 				<StatCard
 					label="Total Pasien Selesai Dilayani"
 					value={dashboard?.finishedPatients ?? 0}
+					icon={CheckCircle2}
+					loading={loading}
 				/>
 			</div>
 		</section>

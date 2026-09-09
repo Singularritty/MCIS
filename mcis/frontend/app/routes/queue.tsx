@@ -1,5 +1,7 @@
+import { Bell, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Select } from "~/components/Select";
+import { Skeleton } from "~/components/Skeleton";
 import { StatusBadge } from "~/components/StatusBadge";
 import {
 	api,
@@ -8,6 +10,7 @@ import {
 	type Registration,
 } from "~/lib/api";
 import { errorMessage, useAuth } from "~/lib/auth";
+import { useToast } from "~/lib/toast";
 import type { Route } from "./+types/queue";
 
 export function meta(_: Route.MetaArgs) {
@@ -16,12 +19,13 @@ export function meta(_: Route.MetaArgs) {
 
 export default function QueuePage() {
 	const { token, can } = useAuth();
+	const { showToast } = useToast();
 	const canManageQueue = can("Petugas Pendaftaran");
 	const canChangeStatus = can("Petugas Pendaftaran", "Dokter");
 
 	const [queues, setQueues] = useState<QueueEntry[]>([]);
 	const [registrations, setRegistrations] = useState<Registration[]>([]);
-	const [status, setStatus] = useState<string | null>(null);
+	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
 	const load = useCallback(async () => {
@@ -36,6 +40,8 @@ export default function QueuePage() {
 			setError(null);
 		} catch (loadError) {
 			setError(errorMessage(loadError, "Gagal memuat antrean"));
+		} finally {
+			setLoading(false);
 		}
 	}, [token]);
 
@@ -54,12 +60,15 @@ export default function QueuePage() {
 		if (!token || !nextWaiting) return;
 		try {
 			await api.queues.call(token, nextWaiting.id);
-			setStatus(
+			showToast(
 				`Antrean ${nextWaiting.queueNumber} dipanggil ke ruang pemeriksaan`,
 			);
 			void load();
 		} catch (callError) {
-			setStatus(errorMessage(callError, "Gagal memanggil antrean berikutnya"));
+			showToast(
+				errorMessage(callError, "Gagal memanggil antrean berikutnya"),
+				"error",
+			);
 		}
 	};
 
@@ -67,10 +76,13 @@ export default function QueuePage() {
 		if (!token) return;
 		try {
 			const queue = await api.queues.create(token, registration.id);
-			setStatus(`Nomor antrean ${queue.queueNumber} berhasil dibuat`);
+			showToast(`Nomor antrean ${queue.queueNumber} berhasil dibuat`);
 			void load();
 		} catch (createError) {
-			setStatus(errorMessage(createError, "Gagal membuat nomor antrean"));
+			showToast(
+				errorMessage(createError, "Gagal membuat nomor antrean"),
+				"error",
+			);
 		}
 	};
 
@@ -81,12 +93,15 @@ export default function QueuePage() {
 		if (!token) return;
 		try {
 			await api.queues.updateStatus(token, queue.id, nextStatus);
-			setStatus(
+			showToast(
 				`Status antrean ${queue.queueNumber} diubah menjadi ${nextStatus}`,
 			);
 			void load();
 		} catch (updateError) {
-			setStatus(errorMessage(updateError, "Gagal mengubah status antrean"));
+			showToast(
+				errorMessage(updateError, "Gagal mengubah status antrean"),
+				"error",
+			);
 		}
 	};
 
@@ -100,6 +115,7 @@ export default function QueuePage() {
 						onClick={handleCallNext}
 						disabled={!nextWaiting}
 					>
+						<Bell size={16} strokeWidth={2.4} />
 						{nextWaiting
 							? `Panggil Antrean Berikutnya (${nextWaiting.queueNumber})`
 							: "Tidak ada antrean menunggu"}
@@ -107,33 +123,38 @@ export default function QueuePage() {
 				)}
 			</div>
 
-			{status && <p className="status-line">{status}</p>}
 			{error && <p className="status-line error">{error}</p>}
 
 			<div className="queue-list">
-				{queues.map((queue) => (
-					<div key={queue.id} className="queue-item">
-						<strong>{queue.queueNumber}</strong>
-						<span>
-							{queue.patientName} &middot; {queue.polyName}
-						</span>
-						<StatusBadge status={queue.status} />
-						{canChangeStatus && (
-							<Select
-								compact
-								value={queue.status}
-								onChange={(value) =>
-									handleStatusChange(queue, value as QueueEntry["status"])
-								}
-								options={REGISTRATION_STATUSES.map((statusOption) => ({
-									value: statusOption,
-									label: statusOption,
-								}))}
-							/>
-						)}
-					</div>
-				))}
-				{queues.length === 0 && (
+				{loading &&
+					Array.from({ length: 3 }).map((_, index) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton rows, no reordering
+						<Skeleton key={`skeleton-${index}`} height={58} />
+					))}
+				{!loading &&
+					queues.map((queue) => (
+						<div key={queue.id} className="queue-item">
+							<strong>{queue.queueNumber}</strong>
+							<span>
+								{queue.patientName} &middot; {queue.polyName}
+							</span>
+							<StatusBadge status={queue.status} />
+							{canChangeStatus && (
+								<Select
+									compact
+									value={queue.status}
+									onChange={(value) =>
+										handleStatusChange(queue, value as QueueEntry["status"])
+									}
+									options={REGISTRATION_STATUSES.map((statusOption) => ({
+										value: statusOption,
+										label: statusOption,
+									}))}
+								/>
+							)}
+						</div>
+					))}
+				{!loading && queues.length === 0 && (
 					<p className="empty-row">Belum ada antrean hari ini</p>
 				)}
 			</div>
@@ -156,6 +177,7 @@ export default function QueuePage() {
 									type="button"
 									onClick={() => handleGenerateQueue(registration)}
 								>
+									<Plus size={16} strokeWidth={2.4} />
 									Buat Antrean
 								</button>
 							</div>
