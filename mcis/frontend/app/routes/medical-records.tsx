@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Select } from "~/components/Select";
 import {
 	api,
 	type MedicalRecord,
@@ -124,19 +125,18 @@ export default function MedicalRecordsPage() {
 		<section>
 			<h2 className="section-title">Pemeriksaan Dokter</h2>
 
-			<label className="patient-picker">
-				<span>Pasien</span>
-				<select
+			<div className="patient-picker">
+				<span id="record-patient-label">Pasien</span>
+				<Select
+					labelledBy="record-patient-label"
 					value={patientId}
-					onChange={(event) => setPatientId(event.target.value)}
-				>
-					{patients.map((patient) => (
-						<option key={patient.id} value={patient.id}>
-							{patient.name} ({patient.medicalRecordNumber})
-						</option>
-					))}
-				</select>
-			</label>
+					onChange={setPatientId}
+					options={patients.map((patient) => ({
+						value: patient.id,
+						label: `${patient.name} (${patient.medicalRecordNumber})`,
+					}))}
+				/>
+			</div>
 
 			{status && <p className="status-line">{status}</p>}
 			{error && <p className="status-line error">{error}</p>}

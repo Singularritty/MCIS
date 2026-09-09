@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Select } from "~/components/Select";
 import { StatusBadge } from "~/components/StatusBadge";
 import {
 	api,
@@ -118,21 +119,17 @@ export default function QueuePage() {
 						</span>
 						<StatusBadge status={queue.status} />
 						{canChangeStatus && (
-							<select
+							<Select
+								compact
 								value={queue.status}
-								onChange={(event) =>
-									handleStatusChange(
-										queue,
-										event.target.value as QueueEntry["status"],
-									)
+								onChange={(value) =>
+									handleStatusChange(queue, value as QueueEntry["status"])
 								}
-							>
-								{REGISTRATION_STATUSES.map((statusOption) => (
-									<option key={statusOption} value={statusOption}>
-										{statusOption}
-									</option>
-								))}
-							</select>
+								options={REGISTRATION_STATUSES.map((statusOption) => ({
+									value: statusOption,
+									label: statusOption,
+								}))}
+							/>
 						)}
 					</div>
 				))}

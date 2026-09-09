@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Modal } from "~/components/Modal";
+import { Select } from "~/components/Select";
 import { ApiError, api, type Patient } from "~/lib/api";
 import { errorMessage, useAuth } from "~/lib/auth";
 import type { Route } from "./+types/patients";
@@ -267,21 +268,23 @@ export default function PatientsPage() {
 								required
 							/>
 						</label>
-						<label>
-							<span>Jenis Kelamin</span>
-							<select
+						<div className="form-field">
+							<span id="patient-gender-label">Jenis Kelamin</span>
+							<Select
+								labelledBy="patient-gender-label"
 								value={form.gender}
-								onChange={(event) =>
+								onChange={(value) =>
 									setForm((current) => ({
 										...current,
-										gender: event.target.value as Patient["gender"],
+										gender: value as Patient["gender"],
 									}))
 								}
-							>
-								<option value="Laki-laki">Laki-laki</option>
-								<option value="Perempuan">Perempuan</option>
-							</select>
-						</label>
+								options={[
+									{ value: "Laki-laki", label: "Laki-laki" },
+									{ value: "Perempuan", label: "Perempuan" },
+								]}
+							/>
+						</div>
 						<label>
 							<span>Tanggal Lahir</span>
 							<input

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Select } from "~/components/Select";
 import { StatusBadge } from "~/components/StatusBadge";
 import {
 	api,
@@ -77,6 +78,10 @@ export default function RegistrationsPage() {
 	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		if (!token) return;
+		if (!form.patientId || !form.doctorId || !form.polyId) {
+			setStatus("Pasien, dokter, dan poli wajib dipilih");
+			return;
+		}
 		try {
 			await api.registrations.create(token, form);
 			setStatus("Pendaftaran pasien berhasil disimpan");
@@ -115,64 +120,51 @@ export default function RegistrationsPage() {
 					<div className="panel">
 						<h3>Form Pendaftaran</h3>
 						<form onSubmit={handleSubmit} className="form-grid">
-							<label>
-								<span>Pasien</span>
-								<select
+							<div className="form-field">
+								<span id="reg-patient-label">Pasien</span>
+								<Select
+									labelledBy="reg-patient-label"
 									value={form.patientId}
-									onChange={(event) =>
-										setForm((current) => ({
-											...current,
-											patientId: event.target.value,
-										}))
+									onChange={(value) =>
+										setForm((current) => ({ ...current, patientId: value }))
 									}
-									required
-								>
-									<option value="">Pilih Pasien</option>
-									{patients.map((patient) => (
-										<option key={patient.id} value={patient.id}>
-											{patient.name}
-										</option>
-									))}
-								</select>
-							</label>
-							<label>
-								<span>Dokter</span>
-								<select
+									placeholder="Pilih Pasien"
+									options={patients.map((patient) => ({
+										value: patient.id,
+										label: patient.name,
+									}))}
+								/>
+							</div>
+							<div className="form-field">
+								<span id="reg-doctor-label">Dokter</span>
+								<Select
+									labelledBy="reg-doctor-label"
 									value={form.doctorId}
-									onChange={(event) =>
-										setForm((current) => ({
-											...current,
-											doctorId: event.target.value,
-										}))
+									onChange={(value) =>
+										setForm((current) => ({ ...current, doctorId: value }))
 									}
-									required
-								>
-									{doctors.map((doctor) => (
-										<option key={doctor.id} value={doctor.id}>
-											{doctor.name}
-										</option>
-									))}
-								</select>
-							</label>
-							<label>
-								<span>Poli</span>
-								<select
+									placeholder="Pilih Dokter"
+									options={doctors.map((doctor) => ({
+										value: doctor.id,
+										label: doctor.name,
+									}))}
+								/>
+							</div>
+							<div className="form-field">
+								<span id="reg-poly-label">Poli</span>
+								<Select
+									labelledBy="reg-poly-label"
 									value={form.polyId}
-									onChange={(event) =>
-										setForm((current) => ({
-											...current,
-											polyId: event.target.value,
-										}))
+									onChange={(value) =>
+										setForm((current) => ({ ...current, polyId: value }))
 									}
-									required
-								>
-									{polyclinics.map((poly) => (
-										<option key={poly.id} value={poly.id}>
-											{poly.name}
-										</option>
-									))}
-								</select>
-							</label>
+									placeholder="Pilih Poli"
+									options={polyclinics.map((poly) => ({
+										value: poly.id,
+										label: poly.name,
+									}))}
+								/>
+							</div>
 							<label>
 								<span>Tanggal Kunjungan</span>
 								<input
@@ -187,22 +179,21 @@ export default function RegistrationsPage() {
 									required
 								/>
 							</label>
-							<label>
-								<span>Jenis Pembayaran</span>
-								<select
+							<div className="form-field span-2">
+								<span id="reg-payment-label">Jenis Pembayaran</span>
+								<Select
+									labelledBy="reg-payment-label"
 									value={form.paymentType}
-									onChange={(event) =>
-										setForm((current) => ({
-											...current,
-											paymentType: event.target.value,
-										}))
+									onChange={(value) =>
+										setForm((current) => ({ ...current, paymentType: value }))
 									}
-								>
-									<option value="BPJS">BPJS</option>
-									<option value="Cash">Cash</option>
-									<option value="Asuransi">Asuransi</option>
-								</select>
-							</label>
+									options={[
+										{ value: "BPJS", label: "BPJS" },
+										{ value: "Cash", label: "Cash" },
+										{ value: "Asuransi", label: "Asuransi" },
+									]}
+								/>
+							</div>
 							<label className="span-2">
 								<span>Keluhan Awal</span>
 								<textarea
@@ -254,21 +245,22 @@ export default function RegistrationsPage() {
 										</td>
 										{canChangeStatus && (
 											<td>
-												<select
+												<Select
+													compact
 													value={registration.status}
-													onChange={(event) =>
+													onChange={(value) =>
 														handleStatusChange(
 															registration,
-															event.target.value as Registration["status"],
+															value as Registration["status"],
 														)
 													}
-												>
-													{REGISTRATION_STATUSES.map((statusOption) => (
-														<option key={statusOption} value={statusOption}>
-															{statusOption}
-														</option>
-													))}
-												</select>
+													options={REGISTRATION_STATUSES.map(
+														(statusOption) => ({
+															value: statusOption,
+															label: statusOption,
+														}),
+													)}
+												/>
 											</td>
 										)}
 									</tr>
