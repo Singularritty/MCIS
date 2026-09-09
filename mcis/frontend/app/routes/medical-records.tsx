@@ -147,7 +147,7 @@ export default function MedicalRecordsPage() {
 						<h3>Form SOAP</h3>
 						<form onSubmit={handleSubmit} className="form-grid">
 							<label className="span-2">
-								<span>Subjective &ndash; Keluhan Pasien</span>
+								<span>Keluhan Pasien</span>
 								<textarea
 									value={form.subjective}
 									onChange={(event) =>
@@ -161,7 +161,7 @@ export default function MedicalRecordsPage() {
 								/>
 							</label>
 							<label>
-								<span>Objective &ndash; Tekanan Darah</span>
+								<span>Tekanan Darah</span>
 								<input
 									value={form.bloodPressure}
 									onChange={(event) =>
@@ -174,7 +174,7 @@ export default function MedicalRecordsPage() {
 								/>
 							</label>
 							<label>
-								<span>Objective &ndash; Suhu Tubuh</span>
+								<span>Suhu Tubuh</span>
 								<input
 									value={form.bodyTemperature}
 									onChange={(event) =>
@@ -187,7 +187,7 @@ export default function MedicalRecordsPage() {
 								/>
 							</label>
 							<label>
-								<span>Objective &ndash; Berat Badan</span>
+								<span>Berat Badan</span>
 								<input
 									value={form.weight}
 									onChange={(event) =>
@@ -201,7 +201,7 @@ export default function MedicalRecordsPage() {
 								/>
 							</label>
 							<label>
-								<span>Objective &ndash; Tinggi Badan</span>
+								<span>Tinggi Badan</span>
 								<input
 									value={form.height}
 									onChange={(event) =>
@@ -215,7 +215,7 @@ export default function MedicalRecordsPage() {
 								/>
 							</label>
 							<label className="span-2">
-								<span>Assessment &ndash; Diagnosa</span>
+								<span>Diagnosa</span>
 								<textarea
 									value={form.assessment}
 									onChange={(event) =>
@@ -229,7 +229,7 @@ export default function MedicalRecordsPage() {
 								/>
 							</label>
 							<label className="span-2">
-								<span>Plan &ndash; Rencana Terapi</span>
+								<span>Rencana Terapi</span>
 								<textarea
 									value={form.plan}
 									onChange={(event) =>
@@ -317,18 +317,19 @@ export default function MedicalRecordsPage() {
 									</strong>
 								</header>
 								<p>
-									<strong>S:</strong> {record.subjective}
+									<strong>Keluhan:</strong> {record.subjective}
 								</p>
 								<p>
-									<strong>O:</strong> TD {record.objective.bloodPressure}, Suhu{" "}
+									<strong>Pemeriksaan:</strong> TD{" "}
+									{record.objective.bloodPressure}, Suhu{" "}
 									{record.objective.bodyTemperature}, BB{" "}
 									{record.objective.weight}, TB {record.objective.height}
 								</p>
 								<p>
-									<strong>A:</strong> {record.assessment}
+									<strong>Diagnosa:</strong> {record.assessment}
 								</p>
 								<p>
-									<strong>P:</strong> {record.plan}
+									<strong>Rencana:</strong> {record.plan}
 								</p>
 								{record.actions.length > 0 && (
 									<p>
