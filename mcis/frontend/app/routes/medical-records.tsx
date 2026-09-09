@@ -1,4 +1,4 @@
-import { ClipboardPlus } from "lucide-react";
+import { ClipboardPlus, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Select } from "~/components/Select";
 import { Skeleton } from "~/components/Skeleton";
@@ -25,6 +25,11 @@ const EMPTY_FORM = {
 	assessment: "",
 	plan: "",
 	actions: "",
+};
+
+type PrescriptionRow = { medicine: string; dosage: string; notes: string };
+
+const EMPTY_PRESCRIPTION_ROW: PrescriptionRow = {
 	medicine: "",
 	dosage: "",
 	notes: "",
@@ -42,6 +47,9 @@ export default function MedicalRecordsPage() {
 		Record<string, Prescription[]>
 	>({});
 	const [form, setForm] = useState(EMPTY_FORM);
+	const [prescriptionRows, setPrescriptionRows] = useState<PrescriptionRow[]>([
+		EMPTY_PRESCRIPTION_ROW,
+	]);
 	const [loadingHistory, setLoadingHistory] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
@@ -109,18 +117,22 @@ export default function MedicalRecordsPage() {
 					.filter(Boolean),
 			});
 
-			if (form.medicine && form.dosage) {
+			const filledRows = prescriptionRows.filter(
+				(row) => row.medicine && row.dosage,
+			);
+			for (const row of filledRows) {
 				await api.prescriptions.create(token, {
 					medicalRecordId: record.id,
 					patientId,
-					medicine: form.medicine,
-					dosage: form.dosage,
-					notes: form.notes,
+					medicine: row.medicine,
+					dosage: row.dosage,
+					notes: row.notes,
 				});
 			}
 
 			showToast("Rekam medis berhasil disimpan");
 			setForm(EMPTY_FORM);
+			setPrescriptionRows([EMPTY_PRESCRIPTION_ROW]);
 			void loadHistory();
 		} catch (submitError) {
 			showToast(
@@ -128,6 +140,26 @@ export default function MedicalRecordsPage() {
 				"error",
 			);
 		}
+	};
+
+	const updatePrescriptionRow = (
+		index: number,
+		field: keyof PrescriptionRow,
+		value: string,
+	) => {
+		setPrescriptionRows((current) =>
+			current.map((row, rowIndex) =>
+				rowIndex === index ? { ...row, [field]: value } : row,
+			),
+		);
+	};
+
+	const addPrescriptionRow = () => {
+		setPrescriptionRows((current) => [...current, EMPTY_PRESCRIPTION_ROW]);
+	};
+
+	const removePrescriptionRow = (index: number) => {
+		setPrescriptionRows((current) => current.filter((_, i) => i !== index));
 	};
 
 	return (
@@ -263,45 +295,69 @@ export default function MedicalRecordsPage() {
 									rows={2}
 								/>
 							</label>
-							<label>
+							<div className="form-field span-2">
 								<span>Resep Obat</span>
-								<input
-									value={form.medicine}
-									onChange={(event) =>
-										setForm((current) => ({
-											...current,
-											medicine: event.target.value,
-										}))
-									}
-									placeholder="Nama obat"
-								/>
-							</label>
-							<label>
-								<span>Dosis</span>
-								<input
-									value={form.dosage}
-									onChange={(event) =>
-										setForm((current) => ({
-											...current,
-											dosage: event.target.value,
-										}))
-									}
-									placeholder="cth. 3 x 1 tablet/hari"
-								/>
-							</label>
-							<label className="span-2">
-								<span>Catatan Resep</span>
-								<input
-									value={form.notes}
-									onChange={(event) =>
-										setForm((current) => ({
-											...current,
-											notes: event.target.value,
-										}))
-									}
-									placeholder="cth. Diminum setelah makan"
-								/>
-							</label>
+								<div className="prescription-rows">
+									{prescriptionRows.map((row, index) => (
+										// biome-ignore lint/suspicious/noArrayIndexKey: rows have no stable id, only reordered by add/remove at the end
+										<div key={index} className="prescription-row">
+											<input
+												value={row.medicine}
+												onChange={(event) =>
+													updatePrescriptionRow(
+														index,
+														"medicine",
+														event.target.value,
+													)
+												}
+												placeholder="Nama obat"
+												aria-label="Nama obat"
+											/>
+											<input
+												value={row.dosage}
+												onChange={(event) =>
+													updatePrescriptionRow(
+														index,
+														"dosage",
+														event.target.value,
+													)
+												}
+												placeholder="cth. 3 x 1 tablet/hari"
+												aria-label="Dosis"
+											/>
+											<input
+												value={row.notes}
+												onChange={(event) =>
+													updatePrescriptionRow(
+														index,
+														"notes",
+														event.target.value,
+													)
+												}
+												placeholder="cth. Diminum setelah makan"
+												aria-label="Catatan resep"
+											/>
+											<button
+												type="button"
+												className="icon-button"
+												onClick={() => removePrescriptionRow(index)}
+												disabled={prescriptionRows.length === 1}
+												aria-label="Hapus obat ini"
+											>
+												<Trash2 size={16} strokeWidth={2.2} />
+											</button>
+										</div>
+									))}
+									<button
+										type="button"
+										className="add-row-button"
+										onClick={addPrescriptionRow}
+									>
+										<Plus size={15} strokeWidth={2.4} />
+										Tambah Obat
+									</button>
+								</div>
+							</div>
 							<button type="submit" className="span-2">
 								<ClipboardPlus size={16} strokeWidth={2.4} />
 								Simpan Rekam Medis
