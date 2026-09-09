@@ -2,10 +2,17 @@ import {
 	createContext,
 	useCallback,
 	useContext,
+	useEffect,
 	useMemo,
 	useState,
 } from "react";
-import { ApiError, type AuthUser, api, type UserRole } from "./api";
+import {
+	ApiError,
+	type AuthUser,
+	api,
+	setUnauthorizedHandler,
+	type UserRole,
+} from "./api";
 
 type AuthContextValue = {
 	token: string | null;
@@ -17,53 +24,91 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const readStoredUser = (): AuthUser | null => {
-	const raw = window.localStorage.getItem("mcis-user");
-	if (!raw) return null;
+const decodeJwtExpiry = (token: string): number | null => {
 	try {
-		return JSON.parse(raw) as AuthUser;
+		const payloadSegment = token.split(".")[1];
+		if (!payloadSegment) return null;
+		const normalized = payloadSegment.replace(/-/g, "+").replace(/_/g, "/");
+		const json = atob(normalized);
+		const payload = JSON.parse(json) as { exp?: number };
+		return typeof payload.exp === "number" ? payload.exp * 1000 : null;
 	} catch {
 		return null;
 	}
 };
 
+const isTokenExpired = (token: string): boolean => {
+	const expiresAt = decodeJwtExpiry(token);
+	if (expiresAt === null) return false;
+	return Date.now() >= expiresAt;
+};
+
+const clearStoredSession = () => {
+	window.localStorage.removeItem("mcis-token");
+	window.localStorage.removeItem("mcis-user");
+};
+
+// Reject an expired token before it's ever used to render protected content,
+// instead of letting the page render and only discover it's invalid once an
+// API call comes back 401.
+const readStoredSession = (): {
+	token: string | null;
+	user: AuthUser | null;
+} => {
+	const storedToken = window.localStorage.getItem("mcis-token");
+	const storedUserRaw = window.localStorage.getItem("mcis-user");
+	if (!storedToken || !storedUserRaw) {
+		return { token: null, user: null };
+	}
+	if (isTokenExpired(storedToken)) {
+		clearStoredSession();
+		return { token: null, user: null };
+	}
+	try {
+		return { token: storedToken, user: JSON.parse(storedUserRaw) as AuthUser };
+	} catch {
+		clearStoredSession();
+		return { token: null, user: null };
+	}
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-	const [token, setToken] = useState<string | null>(() =>
-		window.localStorage.getItem("mcis-token"),
-	);
-	const [user, setUser] = useState<AuthUser | null>(() => readStoredUser());
+	const [session, setSession] = useState(() => readStoredSession());
 
 	const login = useCallback(async (username: string, password: string) => {
 		const result = await api.login(username, password);
-		setToken(result.token);
-		setUser(result.user);
+		setSession({ token: result.token, user: result.user });
 		window.localStorage.setItem("mcis-token", result.token);
 		window.localStorage.setItem("mcis-user", JSON.stringify(result.user));
 	}, []);
 
 	const logout = useCallback(() => {
-		setToken((currentToken) => {
-			if (currentToken) {
-				api.logout(currentToken).catch(() => {
+		setSession((current) => {
+			if (current.token) {
+				api.logout(current.token).catch(() => {
 					// JWT logout is a client-side token discard; ignore network failures.
 				});
 			}
-			return null;
+			return { token: null, user: null };
 		});
-		setUser(null);
-		window.localStorage.removeItem("mcis-token");
-		window.localStorage.removeItem("mcis-user");
+		clearStoredSession();
 	}, []);
+
+	useEffect(() => {
+		setUnauthorizedHandler(logout);
+		return () => setUnauthorizedHandler(null);
+	}, [logout]);
 
 	const value = useMemo<AuthContextValue>(
 		() => ({
-			token,
-			user,
+			token: session.token,
+			user: session.user,
 			login,
 			logout,
-			can: (...roles: UserRole[]) => Boolean(user && roles.includes(user.role)),
+			can: (...roles: UserRole[]) =>
+				Boolean(session.user && roles.includes(session.user.role)),
 		}),
-		[token, user, login, logout],
+		[session, login, logout],
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

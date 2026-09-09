@@ -109,6 +109,15 @@ export class ApiError extends Error {
 	}
 }
 
+// Set by AuthProvider so any 401 from any request (e.g. an expired token
+// rejected mid-session) can force a logout + redirect to /login, not just
+// leave the caller stuck showing a raw "Token tidak valid" error.
+let onUnauthorized: (() => void) | null = null;
+
+export const setUnauthorizedHandler = (handler: (() => void) | null) => {
+	onUnauthorized = handler;
+};
+
 const apiRequest = async <T>(
 	url: string,
 	token: string | null,
@@ -125,6 +134,9 @@ const apiRequest = async <T>(
 
 	const payload = (await response.json()) as ApiEnvelope<T>;
 	if (!response.ok || payload.success === false) {
+		if (response.status === 401 && token) {
+			onUnauthorized?.();
+		}
 		throw new ApiError(
 			payload.message ?? "Terjadi kesalahan",
 			response.status,
